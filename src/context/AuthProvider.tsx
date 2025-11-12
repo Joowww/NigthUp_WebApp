@@ -16,11 +16,9 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [user, setUser] = useState<any | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem('refreshToken'));
-
 
   const login = async (username: string, password: string) => {
-    const res = await api.post('/user/login', { username, password });
+    const res = await api.post('/user/auth/login', { username, password });
 
     const t = res.data.token;
     localStorage.setItem('token', t);

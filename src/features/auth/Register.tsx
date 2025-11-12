@@ -36,8 +36,13 @@ export const Register: React.FC = () => {
 // y crea un nou objecte sense aquest atribut
     const { confirmPassword, ...userCredentials } = data;
 
+    const payload = {
+      ...userCredentials, 
+      role: 'user'
+    };
+
     try {
-      await registerService(userCredentials);
+      await registerService(payload);
       
       toast.success('¡Registro exitoso! Ahora puedes iniciar sesión.');
       navigate('/login'); // Redirige al login
@@ -95,7 +100,7 @@ export const Register: React.FC = () => {
               type="email"
               placeholder="tu@email.com"
               /* ¡AQUÍ ESTÁ LA CORRECCIÓN! */
-              {...register('gmail', { 
+              {...register('email', { 
                 required: 'El email es obligatorio',
                 pattern: {
                   value: /^\S+@\S+$/i,
@@ -103,7 +108,7 @@ export const Register: React.FC = () => {
                 }
               })}
             />
-            {errors.gmail && <p className="text-red-500 text-xs mt-1">{errors.gmail.message}</p>}
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -132,7 +137,6 @@ export const Register: React.FC = () => {
               id="password"
               type="password"
               placeholder="••••••••"
-              /* ¡AQUÍ ESTÁ LA CORRECCIÓN! */
               {...register('password', { required: 'La contraseña es obligatoria' })}
             />
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
