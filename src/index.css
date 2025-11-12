@@ -1,85 +1,132 @@
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
+/* Carga la base de Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+/* Definición de colores usando HSL (Tono, Saturación, Luminosidad)
+  Esto es VITAL para que la opacidad (ej. bg-card/80) funcione.
+*/
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 4.8% 12%; /* #1c1c22 - Un poco más claro que el fondo */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 330 100% 50%; /* #ff0080 */
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 270 90% 65%; /* #7928ca */
+    --secondary-foreground: 0 0% 98%;
+
+    --accent: 190 100% 50%; /* #00d9ff */
+    --accent-foreground: 240 10% 3.9%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%; /* Este es el color del input (oscuro) */
+    --ring: 330 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Colores de Sidebar (de tu archivo figma) */
+    --sidebar: 240 4.8% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 330 100% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 330 100% 50%;
+
+    /* Colores de Charts (de tu archivo figma) */
+    --chart-1: 330 100% 50%;
+    --chart-2: 190 100% 50%;
+    --chart-3: 270 90% 65%;
+    --chart-4: 98 94% 65%; /* #50fa7b */
+    --chart-5: 35 100% 70%; /* #ffb86c */
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+
+  .dark {
+    /* Mantenemos los mismos valores para el modo oscuro */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 4.8% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 330 100% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 270 90% 65%;
+    --secondary-foreground: 0 0% 98%;
+    --accent: 190 100% 50%;
+    --accent-foreground: 240 10% 3.9%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 330 100% 50%;
+    --sidebar: 240 4.8% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 330 100% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 330 100% 50%;
+    --chart-1: 330 100% 50%;
+    --chart-2: 190 100% 50%;
+    --chart-3: 270 90% 65%;
+    --chart-4: 98 94% 65%;
+    --chart-5: 35 100% 70%;
   }
 }
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  
-  /* ESTO ARREGLA EL FONDO BLANCO Y EL CENTRADO */
-  background-color: #474242dc; /* Fondo gris oscuro */
-  color: #e0e0e0;
-  min-height: 100vh;
+
+/* Aplicamos los colores base al body y los bordes por defecto */
+@layer base {
+  * {
+    /* ¡AQUÍ ESTÁ LA CORRECCIÓN! (Quitamos el 'outline-ring/50' que daba error) */
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ================================================================ */
+/* ESTE ES EL BLOQUE DE TIPOGRAFÍA CORREGIDO */
+/* ================================================================ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      @apply text-2xl font-medium leading-normal;
+    }
+    h2 {
+      @apply text-xl font-medium leading-normal;
+    }
+    h3 {
+      @apply text-lg font-medium leading-normal;
+    }
+    h4 {
+      @apply text-base font-medium leading-normal;
+    }
+    p, input {
+      @apply text-base font-normal leading-normal;
+    }
+    label, button {
+      @apply text-base font-medium leading-normal;
+    }
+  }
 }
