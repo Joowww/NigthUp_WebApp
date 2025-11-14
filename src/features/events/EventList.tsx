@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { getEvents } from './eventService';
 import type { Event } from '../../modules/event';
 import { useAuth } from '../../hooks/useAuth';
-import './EventList.css';
 
 export const EventList: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);

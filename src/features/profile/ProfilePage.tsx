@@ -1,14 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Textarea } from '../../ui/textarea';
+import { Avatar, AvatarFallback } from '../../ui/avatar';
+import { Badge } from '../../ui/badge';
+import { Separator } from '../../ui/separator';
 import { Music, Calendar, Heart, MapPin, Edit, Save, Bell, Shield, LogOut } from 'lucide-react';
 import { useState } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export function ProfilePage() {
   const { user, logout } = useAuth();

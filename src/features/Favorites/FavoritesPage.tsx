@@ -1,8 +1,8 @@
-import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { ImageWithFallback } from '../ImageWithFallback';
+import { Card, CardContent } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { Badge } from '../../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Heart, MapPin, Calendar, Users, Clock, Star, Phone } from 'lucide-react';
 
 interface FavoritesPageProps {

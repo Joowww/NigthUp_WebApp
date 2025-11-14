@@ -1,7 +1,7 @@
-import { Calendar as CalendarComponent } from '../ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Calendar as CalendarComponent } from '../../ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Badge } from '../../ui/badge';
+import { Button } from '../../ui/button';
 import { MapPin, Clock, Users, X } from 'lucide-react';
 import { useState } from 'react';
 

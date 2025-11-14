@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MoreVertical, Pin, Trash2, Check } from 'lucide-react';
-import type { Chat } from './pages/ChatPage';
+import type { Chat } from './ChatPage';
 
 interface ChatListProps {
   chats: Chat[];

@@ -14,13 +14,11 @@ export default {
       },
     },
     extend: {
-      /* ¡ESTA ES LA MAGIA! 
-        Le decimos a Tailwind que use nuestras variables HSL
-        y que les aplique la opacidad (alpha-value).
-      */
       colors: {
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
+        "input-background": "hsl(var(--input-background) / <alpha-value>)", // Nueva
+        "switch-background": "hsl(var(--switch-background) / <alpha-value>)", // Nueva
         ring: "hsl(var(--ring) / <alpha-value>)",
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
@@ -66,8 +64,17 @@ export default {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
           "2": "hsl(var(--chart-2) / <alpha-value>)",
           "3": "hsl(var(--chart-3) / <alpha-value>)",
-          "4N": "hsl(var(--chart-4) / <alpha-value>)",
+          "4": "hsl(var(--chart-4) / <alpha-value>)", // Corregí el nombre (tenía "4N")
           "5": "hsl(var(--chart-5) / <alpha-value>)",
+        },
+        // Colores neon adicionales
+        neon: {
+          pink: "hsl(var(--neon-pink) / <alpha-value>)",
+          purple: "hsl(var(--neon-purple) / <alpha-value>)",
+          cyan: "hsl(var(--neon-cyan) / <alpha-value>)",
+          green: "hsl(var(--neon-green) / <alpha-value>)",
+          orange: "hsl(var(--neon-orange) / <alpha-value>)",
+          yellow: "hsl(var(--neon-yellow) / <alpha-value>)",
         },
       },
       borderRadius: {
@@ -93,6 +100,6 @@ export default {
     },
   },
   plugins: [
-    require("tailwindcss-animate") // Plugin de animaciones
+    require("tailwindcss-animate")
   ],
 }

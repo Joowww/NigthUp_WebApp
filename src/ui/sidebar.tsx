@@ -305,7 +305,13 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   );
 }
 
-function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
+function SidebarInset({
+  className,
+  children, // <-- 1. Añade 'children' aquí
+  ...props
+}: React.ComponentProps<"main"> & {
+  children?: React.ReactNode; // <-- 2. Añade 'children' a los tipos
+}) {
   return (
     <main
       data-slot="sidebar-inset"
@@ -315,7 +321,9 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
         className,
       )}
       {...props}
-    />
+    >
+      {children} {/* <-- 3. Añade '{children}' aquí dentro */}
+    </main>
   );
 }
 

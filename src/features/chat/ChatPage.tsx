@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search, ArrowLeft, MoreVertical, Phone, Video, Check, CheckCheck } from 'lucide-react';
-import { ChatList } from '../ChatList';
-import { ChatConversation } from '../ChatConversation';
-import { useAuth } from '../AuthContext';
+import { ChatList } from './ChatList';
+import { ChatConversation } from './ChatConversation';
+import { useAuth } from '../../hooks/useAuth';
 
 export interface Message {
   id: string;

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, MoreVertical, Phone, Video, Send, Smile, Paperclip, Check, CheckCheck } from 'lucide-react';
-import type { Chat } from './pages/ChatPage';
+import type { Chat } from './ChatPage';
 
 interface ChatConversationProps {
   chat: Chat;
