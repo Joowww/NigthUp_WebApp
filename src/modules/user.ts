@@ -5,4 +5,5 @@
     password: string;
     birthday: Date;
     role?: string;
+    avatar?: string;
  }
