@@ -13,7 +13,7 @@ export const EventList: React.FC = () => {
     const load = async () => {
       try {
         const data = await getEvents();
-        setEvents(data);
+       // setEvents(data);
       } catch (err) {
         setError('Error cargando eventos');
       } finally {
@@ -53,8 +53,8 @@ export const EventList: React.FC = () => {
             </div>
             <div className="content">
               <p className="name">{ev.name}</p>
-              <p className="address">{ev.address ?? 'No especificado'}</p>
-              <p className="time">{ev.schedule}</p>
+              <p className="address">{ev.category ?? 'No especificado'}</p>
+              <p className="time">{ev.price}</p>
             </div>
           </div>
         ))}

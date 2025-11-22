@@ -1,55 +1,52 @@
+// AppRoutes.tsx - VERSIÓN CORREGIDA
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
-// Tus importaciones de página
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from '../features/auth/Login';
 import { Register } from '../features/auth/Register';
 import { PrivateRoute } from './PrivateRoutes';
-import { ProtectedLayout } from '../features/protectedLayout'; // (La ruta que pusiste)
+import { SimpleLayout } from '../features/simpleLayout';
 import { HomePage } from '../features/HomePage';
-import { ChatPage } from '../features/chat/ChatPage';
+import { useAuth } from '../hooks/useAuth'; 
+import Loader from '../ui/loading';
+import OnboardingFlow from '../features/PreHome';
 
-// Importaciones de páginas (aún no creadas, pero las añadimos)
-// import { EventsPage } from '../features/events/EventsPage';
-// import { VenuesPage } from '../features/business/VenuesPage';
-// import { CalendarPage } from '../features/calendar/CalendarPage';
-// import { FavoritesPage } from '../features/favorites/FavoritesPage';
-// import { ProfilePage } from '../features/profile/ProfilePage';
+export const AppRoutes: React.FC = () => {
+  const { loading, isAuthenticated, needsOnboarding } = useAuth();
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader/>
+      </div>
+    );
+  }
 
-export const AppRoutes: React.FC = () => (
-  <BrowserRouter>
-    <Routes>
-
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      <Route 
-        path="/" 
-        element={
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Rutas públicas - siempre accesibles */}
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
+        <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
+        
+        {/* Rutas protegidas */}
+        <Route path="/*" element={
           <PrivateRoute>
-            <ProtectedLayout />
+            {needsOnboarding ? (
+              <OnboardingFlow />
+            ) : (
+              <SimpleLayout />
+            )}
           </PrivateRoute>
-        }
-      >
-        
-        {/* La ruta "/" (índice) cargará HomePage */}
-        <Route index element={<HomePage />} /> 
-        
-        {/* La ruta "/chat" cargará ChatPage */}
-        <Route path="chat" element={<ChatPage />} />
+        }>
+          {/* Solo mostrar rutas anidadas si NO necesita onboarding */}
+          {!needsOnboarding && (
+            <Route index element={<HomePage />} />
+          )}
+        </Route>
 
-        {/* --- Tus futuras páginas (listas para descomentar) --- */}
-        {/* <Route path="events" element={<EventsPage />} /> */}
-        {/* <Route path="venues" element={<VenuesPage />} /> */}
-        {/* <Route path="calendar" element={<CalendarPage />} /> */}
-        {/* <Route path="favorites" element={<FavoritesPage />} /> */}
-        {/* <Route path="profile" element={<ProfilePage />} /> */}
-
-        {/* Ruta comodín para 404 dentro de la app */}
-        <Route path="*" element={<div>Página no encontrada</div>} />
-      </Route>
-
-    </Routes>
-  </BrowserRouter>
-);
+        {/* Redirección por defecto */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};

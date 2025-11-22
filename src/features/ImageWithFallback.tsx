@@ -1,42 +1,30 @@
-import React, { useState } from 'react';
-import { ImageIcon } from 'lucide-react'; // Importamos el icono
-import { cn } from '../ui/utils'; // Importamos tu función 'cn' (ajusta la ruta si es necesario)
+// src/components/ImageWithFallback.tsx
+import React from 'react';
 
-// Tu imagen de error SVG (si la prefieres, pero el icono es más limpio)
-// const ERROR_IMG_SRC = 'data:image/svg+xml;base64,...'
+interface ImageWithFallbackProps {
+  src: string;
+  alt: string;
+  className?: string;
+  fallbackSrc?: string;
+}
 
-export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElement>) {
-  const [didError, setDidError] = useState(false);
+export function ImageWithFallback({ 
+  src, 
+  alt, 
+  className, 
+  fallbackSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSJ3aGl0ZSI+SW1hZ2VuIG5vIGRpc3BvbmlibGU8L3RleHQ+PC9zdmc+' 
+}: ImageWithFallbackProps) {
+  const [imgSrc, setImgSrc] = React.useState(src);
 
   const handleError = () => {
-    setDidError(true);
+    setImgSrc(fallbackSrc);
   };
 
-  const { src, alt, style, className, ...rest } = props;
-
-  // Si hay error (o no hay src), mostramos el placeholder oscuro
-  if (didError || !src) {
-    return (
-      <div
-        className={cn(
-          'flex items-center justify-center bg-muted text-muted-foreground', // <-- ESTO ES LO QUE CAMBIA (usa tus colores de tema)
-          className, // Pasamos el className original (para el tamaño, etc.)
-        )}
-        style={style}
-      >
-        <ImageIcon className="w-1/4 h-1/4" />
-      </div>
-    );
-  }
-
-  // Si todo va bien, mostramos la imagen
   return (
     <img
-      src={src}
+      src={imgSrc}
       alt={alt}
       className={className}
-      style={style}
-      {...rest}
       onError={handleError}
     />
   );

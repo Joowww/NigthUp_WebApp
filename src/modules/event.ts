@@ -1,9 +1,16 @@
 export interface Event {
-  _id: string;         
-  name: string;        
-  schedule: string;    
-  address?: string; 
-  joined?: boolean;   
+  _id: string;
+  name: string;
+  schedule: Date;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
+  description: string;
+  category: string;
+  capacity: number;
+  price: number;
+  participants: string[];
 }
 
 

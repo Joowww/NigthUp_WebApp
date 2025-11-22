@@ -257,6 +257,7 @@ function Sidebar({
 function SidebarTrigger({
   className,
   onClick,
+  children,
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar();
@@ -273,6 +274,7 @@ function SidebarTrigger({
         toggleSidebar();
       }}
       {...props}
+
     >
       <PanelLeftIcon />
       <span className="sr-only">Toggle Sidebar</span>
@@ -341,25 +343,33 @@ function SidebarInput({
   );
 }
 
-function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
+function SidebarHeader({ className,children, ...props }: React.ComponentProps<"div"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <div
       data-slot="sidebar-header"
       data-sidebar="header"
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
-function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
+function SidebarFooter({ className,children, ...props }: React.ComponentProps<"div"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <div
       data-slot="sidebar-footer"
       data-sidebar="footer"
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
@@ -377,7 +387,9 @@ function SidebarSeparator({
   );
 }
 
-function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
+function SidebarContent({ className,children, ...props }: React.ComponentProps<"div"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <div
       data-slot="sidebar-content"
@@ -387,7 +399,9 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
@@ -460,25 +474,33 @@ function SidebarGroupContent({
   );
 }
 
-function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
+function SidebarMenu({ className,children, ...props }: React.ComponentProps<"ul"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
       className={cn("flex w-full min-w-0 flex-col gap-1", className)}
       {...props}
-    />
+    >
+      {children}
+    </ul>
   );
 }
 
-function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
+function SidebarMenuItem({ className,children, ...props }: React.ComponentProps<"li"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
       className={cn("group/menu-item relative", className)}
       {...props}
-    />
+    >
+      {children}
+    </li>
   );
 }
 
@@ -588,8 +610,11 @@ function SidebarMenuAction({
 
 function SidebarMenuBadge({
   className,
+  children,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div">& {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <div
       data-slot="sidebar-menu-badge"
@@ -604,16 +629,20 @@ function SidebarMenuBadge({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
+  children,
   ...props
 }: React.ComponentProps<"div"> & {
-  showIcon?: boolean;
+  children?: React.ReactNode; // <- Añade children a los tipos
+    showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.
   const width = React.useMemo(() => {
@@ -627,6 +656,8 @@ function SidebarMenuSkeleton({
       className={cn("flex h-8 items-center gap-2 rounded-md px-2", className)}
       {...props}
     >
+      {children}
+
       {showIcon && (
         <Skeleton
           className="size-4 rounded-md"
@@ -646,7 +677,9 @@ function SidebarMenuSkeleton({
   );
 }
 
-function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
+function SidebarMenuSub({ className, children, ...props }: React.ComponentProps<"ul"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}){
   return (
     <ul
       data-slot="sidebar-menu-sub"
@@ -657,21 +690,29 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
         className,
       )}
       {...props}
-    />
+      >
+     {children}
+    </ul>
+
   );
 }
 
 function SidebarMenuSubItem({
   className,
+  children,
   ...props
-}: React.ComponentProps<"li">) {
+}: React.ComponentProps<"li"> & {
+  children?: React.ReactNode; // <- Añade children a los tipos
+}) {
   return (
     <li
       data-slot="sidebar-menu-sub-item"
       data-sidebar="menu-sub-item"
       className={cn("group/menu-sub-item relative", className)}
       {...props}
-    />
+    >
+      {children}
+    </li>
   );
 }
 
