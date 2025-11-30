@@ -1,9 +1,21 @@
 // src/components/SimpleSidebar.tsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+<<<<<<< HEAD
 import { Home, Music, Building2, Calendar, Heart, LogOut, ChevronLeft, MessageCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo'; 
+=======
+import { 
+  Home, 
+  Music, 
+  Building2, 
+  Calendar, 
+  Heart,
+  MessageCircle,
+  X
+} from 'lucide-react';
+>>>>>>> feature/chatgroup
 
 interface SimpleSidebarProps {
   isOpen: boolean;
@@ -22,6 +34,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     { id: '/venues', label: 'Discotecas', icon: Building2 },
     { id: '/chat', label: 'Chat', icon: MessageCircle },
     { id: '/calendar', label: 'Calendario', icon: Calendar },
+    { id: '/chat', label: 'Chat', icon: MessageCircle },
     { id: '/favorites', label: 'Favoritos', icon: Heart },
   ];
 
@@ -43,6 +56,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
         <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={onToggle} />
       )}
 
+<<<<<<< HEAD
       {/* Modal Confirmación Logout */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -80,6 +94,40 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
+=======
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-gray-900 border-r border-gray-700
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        flex flex-col
+      `}>
+        {/* Header con Logo clickeable */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => handleNavigation('/chat')}
+              className="flex items-center gap-2 group"
+            >
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-all">
+                <span className="text-white text-lg">✨</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">NIGHTUP</h1>
+                <p className="text-xs text-gray-400">Chat</p>
+              </div>
+            </button>
+
+            {/* Botón cerrar (solo móvil) */}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+>>>>>>> feature/chatgroup
         </div>
 
         {/* Navegación */}
