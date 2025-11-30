@@ -6,7 +6,9 @@ import {
   Music, 
   Building2, 
   Calendar, 
-  Heart 
+  Heart,
+  MessageCircle,
+  X
 } from 'lucide-react';
 
 interface SimpleSidebarProps {
@@ -23,6 +25,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onClose })
     { id: '/events', label: 'Eventos', icon: Music },
     { id: '/venues', label: 'Discotecas', icon: Building2 },
     { id: '/calendar', label: 'Calendario', icon: Calendar },
+    { id: '/chat', label: 'Chat', icon: MessageCircle },
     { id: '/favorites', label: 'Favoritos', icon: Heart },
   ];
 
@@ -49,13 +52,29 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onClose })
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col
       `}>
-        {/* Header */}
+        {/* Header con Logo clickeable */}
         <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-              <span className="text-white text-lg">✨</span>
-            </div>
-            <h1 className="text-xl font-bold text-white">NIGHTUP</h1>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => handleNavigation('/chat')}
+              className="flex items-center gap-2 group"
+            >
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-all">
+                <span className="text-white text-lg">✨</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">NIGHTUP</h1>
+                <p className="text-xs text-gray-400">Chat</p>
+              </div>
+            </button>
+
+            {/* Botón cerrar (solo móvil) */}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 

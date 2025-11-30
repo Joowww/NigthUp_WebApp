@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { MoreVertical, Pin, Trash2, Check } from 'lucide-react';
-import type { Chat } from './ChatPage';
+import type { IConversationFormatted } from '../../modules/chat';
 
 interface ChatListProps {
-  chats: Chat[];
+  chats: IConversationFormatted[];
   selectedChatId: string | null;
   onSelectChat: (chatId: string) => void;
   onDeleteChat: (chatId: string) => void;
@@ -46,10 +46,10 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
     setSelectionMode(false);
   };
 
-  const formatTime = (date: Date | undefined) => {
-    if (!date) return '';
+  const formatTime = (date: Date | string) => {
+    const messageDate = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const diff = now.getTime() - messageDate.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -58,8 +58,19 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
     if (minutes < 60) return `${minutes}m`;
     if (hours < 24) return `${hours}h`;
     if (days < 7) return `${days}d`;
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    return messageDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   };
+
+  // Ordenar chats: primero los fijados, luego por fecha
+  const sortedChats = [...chats].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    
+    const timeA = typeof a.lastMessageTime === 'string' ? new Date(a.lastMessageTime).getTime() : a.lastMessageTime.getTime();
+    const timeB = typeof b.lastMessageTime === 'string' ? new Date(b.lastMessageTime).getTime() : b.lastMessageTime.getTime();
+    
+    return timeB - timeA;
+  });
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -101,14 +112,14 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
 
       {/* Chats */}
       <div className="divide-y divide-border">
-        {chats.length === 0 ? (
+        {sortedChats.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-muted-foreground text-sm">
               No hay conversaciones
             </p>
           </div>
         ) : (
-          chats.map((chat) => {
+          sortedChats.map((chat) => {
             const isSelected = selectedChats.has(chat.id);
             const isActive = selectedChatId === chat.id;
 
@@ -146,17 +157,17 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   <img
-                    src={chat.avatar}
+                    src={chat.avatar || 'https://via.placeholder.com/150'}
                     alt={chat.name}
                     className="w-12 h-12 rounded-full object-cover"
                   />
-                  {chat.type === 'user' && chat.isOnline && (
+                  {!chat.isGroup && chat.isOnline && (
                     <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-card rounded-full" />
                   )}
-                  {chat.type === 'venue' && (
+                  {chat.isGroup && (
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-[#ff0080] to-[#7928ca] rounded-full flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                       </svg>
                     </div>
                   )}
@@ -169,7 +180,7 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
                       {chat.isPinned && (
                         <Pin className="h-3.5 w-3.5 text-[#ff0080] fill-[#ff0080]" />
                       )}
-                      <h3 className={`truncate ${chat.unreadCount > 0 ? '' : ''}`}>
+                      <h3 className={`truncate font-medium ${chat.unreadCount && chat.unreadCount > 0 ? 'text-white' : 'text-foreground'}`}>
                         {chat.name}
                       </h3>
                     </div>
@@ -179,13 +190,13 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
                   </div>
                   <div className="flex items-center justify-between">
                     <p className={`text-sm truncate ${
-                      chat.unreadCount > 0 ? 'text-white' : 'text-muted-foreground'
+                      chat.unreadCount && chat.unreadCount > 0 ? 'text-white font-medium' : 'text-muted-foreground'
                     }`}>
-                      {chat.lastMessage}
+                      {chat.lastMessage || 'Sin mensajes'}
                     </p>
-                    {chat.unreadCount > 0 && (
+                    {chat.unreadCount && chat.unreadCount > 0 && (
                       <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-[#ff0080] text-white text-xs rounded-full">
-                        {chat.unreadCount}
+                        {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                       </span>
                     )}
                   </div>
