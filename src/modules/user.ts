@@ -5,8 +5,11 @@
   password: string;
   birthday: Date;
   events: string[];
-    role?: string;
-   comunidad: { type: String, default: '' },
+  role?: string;
+  phoneNumber: string; 
+  securityQuestionKey: string;
+  securityAnswer: string;
+  comunidad: { type: String, default: '' },
   intereses: [{ type: String }],
   onboardingCompleted: { type: Boolean, default: false },
  }

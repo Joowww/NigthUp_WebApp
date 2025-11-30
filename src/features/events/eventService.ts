@@ -12,12 +12,13 @@ export interface EventsResponse {
   };
 }
 
-export const getEvents = async (skip: number = 0, limit: number = 10): Promise<EventsResponse> => {
+export const getEvents = async (skip: number = 0, limit: number = 50): Promise<EventsResponse> => {
   const res = await api.get('/event', {
     params: { skip, limit }
   });
   return res.data; 
 };
+
 
 export const joinEvent = async (eventId: string, userId : string): Promise<void> => {
   try {

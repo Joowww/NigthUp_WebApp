@@ -4,19 +4,23 @@ import { comunidadesAutonomas } from '../assets/dataCA';
 import api from '../api';
 import { useNavigate } from 'react-router-dom';
 import Loader from '../ui/loading';
+import { Search, ChevronRight, Check } from 'lucide-react'; // Iconos para darle flow
 
 const OnboardingFlow = () => {
     
   const { user, updateUser, completeOnboarding } = useAuth();
   const navigate = useNavigate();
+  
   const [step, setStep] = useState(1);
   const [comunidad, setComunidad] = useState('');
   const [intereses, setIntereses] = useState<string[]>([]);
+  
   const [filteredComunidades, setFilteredComunidades] = useState(comunidadesAutonomas);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const categorias = ['Trap', 'Reagge', 'Edgy', 'Tecno', 'Reaggeton', 'House', 'Loofy', 'Funk', 'Pop', 'Indie', 'Rock', 'Metal'];
+  // Categorías con un poco más de estilo visual si quisieras añadir iconos luego
+  const categorias = ['Trap', 'Reagge', 'Edgy', 'Tecno', 'Reaggeton', 'House', 'Loofy', 'Funk', 'Pop', 'Indie', 'Rock', 'Metal', 'Trendy'];
 
   useEffect(() => {
     if (search) {
@@ -41,31 +45,24 @@ const OnboardingFlow = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Opcional: Guardar preferencias en el backend si quieres
-      if (user?._id) {
-        await api.patch('/user/preferences', {
-          comunidad,
-          intereses
-        });
+      // 1. LLAMADA AL BACKEND
+      const res = await api.patch('/user/complete-onboarding', {
+        comunidad,
+        intereses
+      });
+
+      // 2. ACTUALIZAR ESTADO LOCAL
+      if (res.data && res.data.user) {
+         updateUser(res.data.user);
+      } else {
+         completeOnboarding();
       }
 
-      // Marcar onboarding como completado en el contexto
-      completeOnboarding();
-
-      // Actualizar usuario con las preferencias (opcional)
-      if (user) {
-        updateUser({
-          ...user,
-          comunidad,
-          intereses
-        });
-      }
-
-      // Redirigir al HomePage
+      // 3. IR A HOME
       navigate('/');
+      
     } catch (error) {
-      console.error('Error en onboarding:', error);
-      // Aún así completar el onboarding localmente
+      console.error('Error completando onboarding:', error);
       completeOnboarding();
       navigate('/');
     } finally {
@@ -73,42 +70,48 @@ const OnboardingFlow = () => {
     }
   };
 
-  // [Los pasos 1 y 2 se mantienen igual que antes...]
-  // Paso 1: Selección de comunidad
+  // --- PASO 1: COMUNIDAD ---
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-auto">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        {/* Fondo decorativo */}
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background pointer-events-none" />
+        
+        <div className="bg-card border border-border/50 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-auto relative z-10 animate-in fade-in zoom-in duration-300">
+          
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">¡Bienvenido!</h1>
-            <p className="text-gray-600">Ayúdanos a personalizar tu experiencia</p>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+              ¿De dónde eres?
+            </h2>
+            <p className="text-muted-foreground">Para mostrarte los mejores eventos cerca de ti</p>
           </div>
-          
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">¿De dónde eres?</h2>
-          <p className="text-gray-600 mb-6">Selecciona tu comunidad autónoma para encontrar eventos cerca de ti</p>
-          
+
           <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
-              placeholder="🔍 Buscar comunidad..."
+              placeholder="Buscar comunidad..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-white placeholder:text-gray-600"
             />
           </div>
 
-          <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-xl mb-6">
-            {filteredComunidades.map((comunidadItem) => (
+          <div className="h-64 overflow-y-auto space-y-2 mb-6 pr-2 custom-scrollbar">
+            {filteredComunidades.map((c) => (
               <button
-                key={comunidadItem}
-                onClick={() => setComunidad(comunidadItem)}
-                className={`w-full text-left p-4 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                  comunidad === comunidadItem 
-                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                    : 'text-gray-700'
+                key={c}
+                onClick={() => setComunidad(c)}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 border ${
+                  comunidad === c
+                    ? 'bg-primary/20 border-primary text-white shadow-[0_0_15px_rgba(255,0,128,0.3)]'
+                    : 'bg-gray-800/30 border-transparent text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}
               >
-                {comunidadItem}
+                <div className="flex items-center justify-between">
+                  <span>{c}</span>
+                  {comunidad === c && <Check className="w-4 h-4 text-primary" />}
+                </div>
               </button>
             ))}
           </div>
@@ -116,36 +119,39 @@ const OnboardingFlow = () => {
           <button
             onClick={() => setStep(2)}
             disabled={!comunidad}
-            className="w-full bg-blue-500 text-white py-4 rounded-xl hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
+            className="w-full bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center gap-2 group"
           >
             Continuar
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
     );
   }
 
-  // Paso 2: Selección de intereses
+  // --- PASO 2: INTERESES ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Tus intereses</h1>
-          <p className="text-gray-600">Selecciona lo que más te gusta</p>
-        </div>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-secondary/20 via-background to-background pointer-events-none" />
+
+      <div className="bg-card border border-border/50 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-auto relative z-10 animate-in fade-in slide-in-from-right-8 duration-300">
         
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">¿Qué te interesa?</h2>
-        <p className="text-gray-600 mb-6">Elige las categorías que más te llamen la atención</p>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent mb-2">
+            Tus Gustos
+          </h2>
+          <p className="text-muted-foreground">Elige lo que te mueve para personalizar tu feed</p>
+        </div>
         
         <div className="grid grid-cols-2 gap-3 mb-8">
           {categorias.map((categoria) => (
             <button
               key={categoria}
               onClick={() => handleInteresToggle(categoria)}
-              className={`p-4 border-2 rounded-xl transition-all duration-200 ${
+              className={`p-4 border rounded-xl transition-all duration-200 font-medium ${
                 intereses.includes(categoria)
-                  ? 'bg-blue-500 text-white border-blue-500 transform scale-105'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                  ? 'bg-secondary/20 border-secondary text-white shadow-[0_0_15px_rgba(121,40,202,0.3)] scale-105'
+                  : 'bg-gray-800/30 border-gray-800 text-gray-400 hover:border-secondary/50 hover:text-white hover:bg-gray-800'
               }`}
             >
               {categoria}
@@ -153,19 +159,19 @@ const OnboardingFlow = () => {
           ))}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <button
             onClick={() => setStep(1)}
-            className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl hover:bg-gray-300 transition-colors font-semibold"
+            className="flex-1 bg-gray-800 text-gray-400 py-4 rounded-xl hover:bg-gray-700 hover:text-white transition-colors font-semibold"
           >
             Atrás
           </button>
           <button
             onClick={handleSubmit}
             disabled={intereses.length === 0 || loading}
-            className="flex-1 bg-blue-500 text-white py-4 rounded-xl hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center"
+            className="flex-1 bg-gradient-to-r from-secondary to-accent text-white py-4 rounded-xl font-bold hover:shadow-lg hover:shadow-secondary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
           >
-            {loading ? <Loader /> : 'Completar'}
+            {loading ? <Loader /> : '¡Empezar!'}
           </button>
         </div>
       </div>

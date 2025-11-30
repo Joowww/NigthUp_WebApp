@@ -1,86 +1,45 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import api from '../api';
-import { useEffect } from 'react';
 
-interface AuthContextType {//estructura de lo que guardaremos
+interface AuthContextType {
   user: any | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateUser: (userData: any) => void; 
+  updateUser: (userData: any) => void;
   isAuthenticated: boolean;
   needsOnboarding: boolean;
   loading: boolean;
   completeOnboarding: () => void;
 }
-//crea el contexto con el tipo definido, es com una tuberia on viatgen dades compartides
-//de moment es inicialitza com a undefined
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-//a quil va a proveir les dades el context
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // 1. Cargamos datos iniciales
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [user, setUser] = useState<any | null>(() => {
     const userData = localStorage.getItem('user');
     return userData ? JSON.parse(userData) : null;
   });
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Función para verificar si necesita onboarding basado en el contador
-  const checkOnboardingNeeded = () => {
-    const onboardingCounter = parseInt(localStorage.getItem('onboardingCounter') || '0');
-    const onboardingCompleted = localStorage.getItem('onboardingCompleted') === 'true';
-    
-    if (onboardingCompleted || onboardingCounter < 10) {
-      return false;
-    }
-    return true;
-  };
+  // 2. LOGICA AUTOMÁTICA:
+  // Si hay usuario Y su campo onboardingCompleted es false => true (Muestra PreHome)
+  // En cualquier otro caso => false (Muestra Home)
+  const needsOnboarding = !!user && user.onboardingCompleted === false;
 
-  // Función para incrementar el contador
-  const incrementOnboardingCounter = () => {
-    const currentCounter = parseInt(localStorage.getItem('onboardingCounter') || '0');
-    const newCounter = currentCounter + 1;
-    localStorage.setItem('onboardingCounter', newCounter.toString());
-    
-    // Si llega a 10, mostrar onboarding
-    if (newCounter >= 10) {
-      setNeedsOnboarding(true);
-    }
-  };
-
-  // Función para completar onboarding
-  const completeOnboarding = () => {
-    localStorage.setItem('onboardingCompleted', 'true');
-    localStorage.setItem('onboardingCounter', '0'); // Resetear contador
-    setNeedsOnboarding(false);
-  };
-
-  // Al cargar la app, verificar si necesita onboarding
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
       
       if (storedToken && storedUser) {
-        try {
           setToken(storedToken);
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          
-          // Verificar si necesita onboarding basado en el contador
-          if (checkOnboardingNeeded()) {
-            setNeedsOnboarding(true);
-          }
-        } catch (error) {
-          console.error('Error initializing auth:', error);
-          logout();
-        }
+          setUser(JSON.parse(storedUser));
       }
       setLoading(false);
     };
-
     initializeAuth();
   }, []);
 
@@ -88,22 +47,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await api.post('/user/auth/login', { username, password });
-
+      
       const t = res.data.token;
       const userData = res.data.user;
       
+      // Guardamos todo
       localStorage.setItem('token', t);
       localStorage.setItem('refreshToken', res.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setToken(t);
       setUser(userData);
-
-      incrementOnboardingCounter();
-
-      if (checkOnboardingNeeded()) {
-        setNeedsOnboarding(true);
-      }
+      
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -118,13 +73,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-    setNeedsOnboarding(false);
     setLoading(false);
   };
 
   const updateUser = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  // Función auxiliar por si queremos forzar el completado localmente
+  const completeOnboarding = () => {
+    if (user) {
+      const updatedUser = { ...user, onboardingCompleted: true };
+      updateUser(updatedUser);
+    }
   };
 
   return (

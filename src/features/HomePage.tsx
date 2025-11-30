@@ -10,6 +10,9 @@ import { Heart, MapPin, Calendar, Users, Clock, TrendingUp, Loader } from 'lucid
 import { ImageWithFallback } from './ImageWithFallback';
 import { EventMap } from '../ui/eventMap';
 
+import Loadder from './../ui/loading';
+import { ScrollArea } from '../ui/scroll-area';
+
 export function HomePage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +25,7 @@ export function HomePage() {
     hasMore: false
   });
   const { user, updateUser } = useAuth();
+  const Loader2 = Loadder;
 
   // Mejorar la verificación de usuario unido
   const isUserJoined = (eventId: string): boolean => {
@@ -38,7 +42,6 @@ export function HomePage() {
     });
   };
 
-  // Cargar eventos iniciales
   useEffect(() => {
     const loadEvents = async () => {
       try {
@@ -179,11 +182,10 @@ export function HomePage() {
     });
   };
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader className="w-6 h-6 animate-spin text-primary" />
-        <div className="text-white">Cargando eventos...</div>
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 />
       </div>
     );
   }
@@ -197,124 +199,133 @@ export function HomePage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* --- MAPA EN LA PARTE SUPERIOR --- */}
-      <section>
-        <h2 className="text-2xl font-bold text-white mb-4">Eventos en el Mapa</h2>
-        <EventMap events={events} />
-      </section>
+    <div className="h-full w-full bg-background">
+      {/* ScrollArea con scrollbar personalizado */}
+      <ScrollArea className="h-full w-full custom-scrollbar">
+        <div className="space-y-8 px-6 py-6">
 
-      {/* --- EVENTOS RECOMENDADOS --- */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-white">Eventos Recomendados</h2>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Mostrando {events.length} de {pagination.total} eventos
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events.map((event) => {
-            const isJoined = isUserJoined(event._id);
-            
-            return (
-              <Card key={event._id} className="bg-card border-border overflow-hidden">
-                <div className="relative">
-                  <ImageWithFallback
-                    src={`https://images.unsplash.com/photo-1541532713592-79a0317b6b77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWdnYWV0b24lMjBwYXJ0eXxlbnwxfHx8fDE3NjAwNzg2Nzl8MA&ixlib=rb-4.1.0&q=80&w=400`}
-                    alt={event.name}
-                    className="h-40 w-full object-cover"
-                  />
-                  <Badge className="absolute top-2 left-2 bg-gradient-to-r from-primary to-secondary text-white">
-                    {event.category}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 bg-black/30 text-white hover:bg-black/50 hover:text-white"
+          {/* --- MAPA EN LA PARTE SUPERIOR --- */}
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-4">Eventos en el Mapa</h2>
+            <EventMap events={events} />
+          </section>
+
+          {/* --- EVENTOS RECOMENDADOS --- */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-6 h-6 text-primary" />
+                <h2 className="text-2xl font-bold text-white">Eventos Recomendados</h2>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Mostrando {events.length} de {pagination.total} eventos
+              </div>
+            </div>
+           
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {events.map((event) => {
+                const isJoined = isUserJoined(event._id);
+               
+                return (
+                  <Card 
+                    key={event._id} 
+                    className="bg-card border-border overflow-hidden hover:shadow-2xl hover:shadow-primary/20 hover:scale-105 transition-all duration-300 group"
                   >
-                    <Heart className="w-5 h-5" />
-                  </Button>
-                </div>
-                
-                <CardContent className="p-4 space-y-3">
-                  <h3 className="text-lg font-semibold text-white truncate">{event.name}</h3>
-                  
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {event.description}
-                  </p>
-                  
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <span>{getReadableLocation(event)}</span>
+                    <div className="relative">
+                      <ImageWithFallback
+                        src={`https://images.unsplash.com/photo-1541532713592-79a0317b6b77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWdnYWV0b24lMjBwYXJ0eXxlbnwxfHx8fDE3NjAwNzg2Nzl8MA&ixlib=rb-4.1.0&q=80&w=400`}
+                        alt={event.name}
+                        className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <Badge className="absolute top-2 left-2 bg-gradient-to-r from-primary to-secondary text-white">
+                        {event.category}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 bg-black/30 text-white hover:bg-black/50 hover:text-white"
+                      >
+                        <Heart className="w-5 h-5" />
+                      </Button>
                     </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-secondary" />
-                        <span>{formatDate(event.schedule)}</span>
+                   
+                    <CardContent className="p-4 space-y-3">
+                      <h3 className="text-lg font-semibold text-white truncate">{event.name}</h3>
+                     
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {event.description}
+                      </p>
+                     
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span>{getReadableLocation(event)}</span>
+                        </div>
+                       
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-secondary" />
+                            <span>{formatDate(event.schedule)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-accent" />
+                            <span>{formatTime(event.schedule)}</span>
+                          </div>
+                        </div>
+                       
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-chart-5" />
+                          <span>{event.participants?.length || 0} apuntados</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-accent" />
-                        <span>{formatTime(event.schedule)}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-chart-5" />
-                      <span>{event.participants?.length || 0} apuntados</span>
-                    </div>
-                  </div>
 
-                  {/* Botón mejorado con mejor feedback */}
-                  <Button 
-                    className={`w-full transition-all duration-200 ${
-                      isJoined 
-                        ? 'bg-gray-600 hover:bg-gray-700' 
-                        : 'bg-gradient-to-r from-primary to-secondary hover:shadow-lg hover:shadow-primary/30 hover:scale-105'
-                    } text-white font-semibold`}
-                    onClick={() => {
-                      if (!user) {
-                        alert('Por favor, inicia sesión para unirte a eventos');
-                        return;
-                      }
-                      isJoined 
-                        ? handleLeaveEvent(event._id) 
-                        : handleJoinEvent(event._id);
-                    }}
-                  >
-                    {!user ? 'Inicia sesión' : isJoined ? 'Salirse' : 'Unirse'}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+                      {/* Botón mejorado con mejor feedback */}
+                      <Button
+                        className={`w-full transition-all duration-200 ${
+                          isJoined
+                            ? 'bg-gray-600 hover:bg-gray-700'
+                            : 'bg-gradient-to-r from-primary to-secondary hover:shadow-lg hover:shadow-primary/30 hover:scale-105'
+                        } text-white font-semibold`}
+                        onClick={() => {
+                          if (!user) {
+                            alert('Por favor, inicia sesión para unirte a eventos');
+                            return;
+                          }
+                          isJoined
+                            ? handleLeaveEvent(event._id)
+                            : handleJoinEvent(event._id);
+                        }}
+                      >
+                        {!user ? 'Inicia sesión' : isJoined ? 'Salirse' : 'Unirse'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Botón para cargar más eventos */}
+            {pagination.hasMore && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={loadMoreEvents}
+                  disabled={loadingMore}
+                  className="bg-gradient-to-r from-primary to-secondary text-white px-8 py-2"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    'Cargar más eventos'
+                  )}
+                </Button>
+              </div>
+            )}
+          </section>
         </div>
-
-        {/* Botón para cargar más eventos */}
-        {pagination.hasMore && (
-          <div className="flex justify-center mt-8">
-            <Button 
-              onClick={loadMoreEvents} 
-              disabled={loadingMore}
-              className="bg-gradient-to-r from-primary to-secondary text-white px-8 py-2"
-            >
-              {loadingMore ? (
-                <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  Cargando...
-                </>
-              ) : (
-                'Cargar más eventos'
-              )}
-            </Button>
-          </div>
-        )}
-      </section>
+      </ScrollArea>
     </div>
   );
 }

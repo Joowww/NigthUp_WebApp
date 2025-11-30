@@ -207,3 +207,46 @@
     -webkit-line-clamp: 2;
   }
 }
+/* Añadir a tu index.css si necesitas más personalización */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ScrollArea personalizado con colores de tu tema */
+.scroll-area-custom .scrollbar-thumb {
+  background: hsl(330 100% 50% / 0.3);
+  border-radius: 4px;
+}
+
+.scroll-area-custom .scrollbar-thumb:hover {
+  background: hsl(330 100% 50% / 0.6);
+}
+
+/* Añade esto al final de tu index.css */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(330 100% 50% / 0.5) hsl(240 3.7% 15.9% / 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(240 3.7% 15.9% / 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(330 100% 50% / 0.5);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(330 100% 50% / 0.7);
+}

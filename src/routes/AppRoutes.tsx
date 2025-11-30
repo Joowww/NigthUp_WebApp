@@ -9,6 +9,9 @@ import { HomePage } from '../features/HomePage';
 import { useAuth } from '../hooks/useAuth'; 
 import Loader from '../ui/loading';
 import OnboardingFlow from '../features/PreHome';
+import {EventsPage} from '../features/events/EventsPage';
+import { CalendarPage } from '../features/calendar/CalendarPage';
+import { ChatPage } from '../features/chat/ChatPage';
 
 export const AppRoutes: React.FC = () => {
   const { loading, isAuthenticated, needsOnboarding } = useAuth();
@@ -40,7 +43,12 @@ export const AppRoutes: React.FC = () => {
         }>
           {/* Solo mostrar rutas anidadas si NO necesita onboarding */}
           {!needsOnboarding && (
+            <>
             <Route index element={<HomePage />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            </>
           )}
         </Route>
 

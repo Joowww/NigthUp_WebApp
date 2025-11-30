@@ -4,80 +4,62 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 
-import { cn } from "./utils";
+import { cn } from "./utils"; // Asegúrate que la ruta a utils es correcta
 import { buttonVariants } from "./button";
 
 function Calendar({
   className,
   classNames,
-  components,
   showOutsideDays = true,
   ...props
 }: React.ComponentProps<typeof DayPicker>) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)} // Un poco más de padding general
       classNames={{
-        months: "flex flex-col sm:flex-row gap-2",
-        month: "flex flex-col gap-4",
-        caption: "flex justify-center pt-1 relative items-center w-full",
-        caption_label: "text-sm font-medium",
-        nav: "flex items-center gap-1",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        month: "space-y-6", // Más espacio entre el título del mes y los días
+        caption: "flex justify-center pt-1 relative items-center",
+        caption_label: "text-lg font-bold text-white", // Título del mes más grande y blanco
+        nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "size-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20 hover:bg-white/10"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-x-1",
+        table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+          "text-muted-foreground rounded-md w-10 font-normal text-[0.9rem]", // Encabezados (Lu, Ma...) más anchos
         row: "flex w-full mt-2",
-        cell: cn(
-          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",
-          props.mode === "range"
-            ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
-            : "[&:has([aria-selected])]:rounded-md",
-        ),
+        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "size-8 p-0 font-normal aria-selected:opacity-100",
+          "h-10 w-10 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-white/10 hover:text-white" // Días más grandes (10x10)
         ),
-        day_range_start:
-          "day-range-start aria-selected:bg-primary aria-selected:text-primary-foreground",
-        day_range_end:
-          "day-range-end aria-selected:bg-primary aria-selected:text-primary-foreground",
+        day_range_end: "day-range-end",
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
+          "bg-[#ff0080] text-white hover:bg-[#ff0080] hover:text-white focus:bg-[#ff0080] focus:text-white rounded-md shadow-[0_0_15px_rgba(255,0,128,0.5)]", // El día seleccionado en ROSA NEÓN
+        day_today: "bg-white/10 text-white font-bold border border-white/20 rounded-md",
         day_outside:
-          "day-outside text-muted-foreground aria-selected:text-muted-foreground",
+          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...(classNames || {}),
       }}
-
       components={{
-        // <-- tipo correcto: SVG props + direction
-        Chevron: ({
-          className,
-          direction,
-          ...svgProps
-        }: React.SVGProps<SVGSVGElement> & { direction?: "left" | "right" }) =>
-          direction === "left" ? (
-            <ChevronLeft className={cn("size-4", className)} {...svgProps} />
-          ) : (
-            <ChevronRight className={cn("size-4", className)} {...svgProps} />
-          ),
-        ...(components || {}),
+        Chevron: ({ ...props }) => <ChevronLeft className="h-5 w-5" {...props} />, // Iconos un pelín más grandes
+        // Ajuste para el icono derecho si fuera necesario, react-day-picker v8 lo maneja auto a veces,
+        // pero por defecto usa IconLeft/Right o Next/Prev. Dejamos el default con override de estilo.
       }}
       {...props}
     />
   );
 }
+Calendar.displayName = "Calendar";
 
 export { Calendar };
