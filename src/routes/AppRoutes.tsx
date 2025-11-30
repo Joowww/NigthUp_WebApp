@@ -6,7 +6,6 @@ import { Register } from '../features/auth/Register';
 import { PrivateRoute } from './PrivateRoutes';
 import { SimpleLayout } from '../features/simpleLayout';
 import { HomePage } from '../features/HomePage';
-import { ChatPage } from '../features/chat/ChatPage';
 import { useAuth } from '../hooks/useAuth'; 
 import OnboardingFlow from '../features/PreHome';
 import {EventsPage} from '../features/events/EventsPage';
@@ -23,7 +22,7 @@ export const AppRoutes: React.FC = () => {
         {/* Rutas públicas - siempre accesibles */}
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
-        <Route path="/chat" element={<ChatPage />} /> {/* ✅ Esta es la correcta */}
+        
                 
         {/* Rutas protegidas */}
         <Route path="/*" element={
@@ -38,15 +37,10 @@ export const AppRoutes: React.FC = () => {
           {/* Solo mostrar rutas anidadas si NO necesita onboarding */}
           {!needsOnboarding && (
             <>
-<<<<<<< HEAD
             <Route index element={<HomePage />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="chat" element={<ChatPage />} />
-=======
-              <Route index element={<HomePage />} />
-              <Route path="chat" element={<ChatPage />} /> {/* ✅ Esta es la correcta */}
->>>>>>> feature/chatgroup
             </>
           )}
         </Route>

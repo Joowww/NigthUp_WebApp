@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import type { IConversationFormatted, IMessageFormatted } from '../../modules/chat';
 import { useSocket } from '../../hooks/useSocket';
+import React from 'react';
+
 
 interface ChatConversationProps {
   chat: IConversationFormatted & { messages: IMessageFormatted[] };
@@ -35,7 +37,7 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId }:
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,14 +54,7 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId }:
       socket.typing({ conversationId: chat.id });
     }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      socket.stopTyping({ conversationId: chat.id });
-    }, 1000);
+    
   };
 
   const handleSend = () => {
