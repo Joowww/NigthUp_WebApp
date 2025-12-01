@@ -10,7 +10,6 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Card } from '../../ui/card';
-import { ScrollBar } from '../../ui/scroll-area';
 
 import { Lock, Mail, User as UserIcon, Calendar, Phone, ShieldQuestion, KeyRound } from 'lucide-react';
 type RegisterFormData = User & {

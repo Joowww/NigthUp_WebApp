@@ -2,64 +2,129 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { 
+  format, 
+  addMonths, 
+  subMonths, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isSameDay, 
+  getDay,
+  isToday
+} from "date-fns";
+import { es } from "date-fns/locale";
 
-import { cn } from "./utils"; // Asegúrate que la ruta a utils es correcta
+import { cn } from "../lib/utils"; 
 import { buttonVariants } from "./button";
 
-function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  ...props
-}: React.ComponentProps<typeof DayPicker>) {
+interface CalendarProps {
+  className?: string;
+  selectedDate?: Date;               
+  onDateSelect: (date: Date) => void; 
+  eventDates?: Date[];               
+}
+
+function Calendar({ className, selectedDate, onDateSelect, eventDates = [] }: CalendarProps) {
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+
+  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+
+  const firstDayOfMonth = startOfMonth(currentMonth);
+  const lastDayOfMonth = endOfMonth(currentMonth);
+  
+  const daysInMonth = eachDayOfInterval({
+    start: firstDayOfMonth,
+    end: lastDayOfMonth,
+  });
+
+  const startingDayIndex = getDay(firstDayOfMonth); 
+  const paddingDays = startingDayIndex === 0 ? 6 : startingDayIndex - 1; 
+
+  const weekDays = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+
+  const hasEvent = (day: Date) => {
+    return eventDates.some(eventDate => isSameDay(eventDate, day));
+  };
+
   return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn("p-4", className)} // Un poco más de padding general
-      classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-6", // Más espacio entre el título del mes y los días
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-lg font-bold text-white", // Título del mes más grande y blanco
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 text-white border-white/20 hover:bg-white/10"
-        ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell:
-          "text-muted-foreground rounded-md w-10 font-normal text-[0.9rem]", // Encabezados (Lu, Ma...) más anchos
-        row: "flex w-full mt-2",
-        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-10 w-10 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-white/10 hover:text-white" // Días más grandes (10x10)
-        ),
-        day_range_end: "day-range-end",
-        day_selected:
-          "bg-[#ff0080] text-white hover:bg-[#ff0080] hover:text-white focus:bg-[#ff0080] focus:text-white rounded-md shadow-[0_0_15px_rgba(255,0,128,0.5)]", // El día seleccionado en ROSA NEÓN
-        day_today: "bg-white/10 text-white font-bold border border-white/20 rounded-md",
-        day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
-        ...(classNames || {}),
-      }}
-      components={{
-        Chevron: ({ ...props }) => <ChevronLeft className="h-5 w-5" {...props} />, // Iconos un pelín más grandes
-        // Ajuste para el icono derecho si fuera necesario, react-day-picker v8 lo maneja auto a veces,
-        // pero por defecto usa IconLeft/Right o Next/Prev. Dejamos el default con override de estilo.
-      }}
-      {...props}
-    />
+    // CAMBIO: Quitado 'mx-auto' para que no se centre forzosamente, solo w-full
+    <div className={cn("relative w-full", className)}>
+      {/* Marco decorativo neón */}
+      <div className="absolute inset-0 border-2 border-[#ff0080]/20 rounded-xl pointer-events-none blur-sm" />
+
+      <div className="p-6 bg-[#1a1a1a] rounded-xl border border-[#ff0080] shadow-2xl">
+        
+        {/* CABECERA */}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-black text-white uppercase tracking-wider pl-2">
+            {format(currentMonth, "MMMM yyyy", { locale: es })}
+          </h2>
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={prevMonth}
+              className={cn(buttonVariants({ variant: "outline" }), "h-10 w-10 bg-transparent p-0 text-white hover:bg-[#ff0080] hover:text-white border-[#ff0080]/50")}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button 
+              onClick={nextMonth}
+              className={cn(buttonVariants({ variant: "outline" }), "h-10 w-10 bg-transparent p-0 text-white hover:bg-[#ff0080] hover:text-white border-[#ff0080]/50")}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* DÍAS SEMANA */}
+        <div className="grid grid-cols-7 mb-4">
+          {weekDays.map((day) => (
+            <div key={day} className="text-[#00d9ff] font-bold text-lg uppercase tracking-widest text-center">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* CUADRÍCULA DÍAS */}
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: paddingDays }).map((_, i) => (
+            <div key={`padding-${i}`} className="invisible" />
+          ))}
+
+          {daysInMonth.map((date) => {
+            const isSelected = selectedDate && isSameDay(date, selectedDate);
+            const isCurrentDay = isToday(date);
+            const dayHasEvent = hasEvent(date);
+
+            return (
+              <button
+                key={date.toString()}
+                onClick={() => onDateSelect(date)} 
+                className={cn(
+                  "h-20 w-full rounded-xl flex flex-col items-center justify-center text-xl font-medium transition-all relative group",
+                  "text-gray-300 hover:bg-white/10 hover:text-white border border-transparent hover:border-[#ff0080]/30",
+                  isSelected && "bg-[#ff0080] text-white shadow-[0_0_20px_#ff0080] font-bold z-10 scale-105 border-none",
+                  !isSelected && isCurrentDay && "bg-white/5 text-[#00d9ff] font-bold border-[#00d9ff]/50"
+                )}
+              >
+                <span>{format(date, "d")}</span>
+                
+                {/* Indicador de evento */}
+                {dayHasEvent && (
+                  <span className={cn(
+                    "absolute bottom-2 w-1.5 h-1.5 rounded-full",
+                    isSelected ? "bg-white animate-pulse" : "bg-[#ff0080]"
+                  )} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
-Calendar.displayName = "Calendar";
 
 export { Calendar };
