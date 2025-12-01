@@ -8,7 +8,7 @@ import { Search, ChevronRight, Check } from 'lucide-react'; // Iconos para darle
 
 const OnboardingFlow = () => {
     
-  const { user, updateUser, completeOnboarding } = useAuth();
+  const { updateUser, completeOnboarding } = useAuth();
   const navigate = useNavigate();
   
   const [step, setStep] = useState(1);
