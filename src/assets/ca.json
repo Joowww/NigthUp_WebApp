@@ -1,0 +1,107 @@
+{
+  "auth": {
+    "login_title": "Inicia la sessió",
+    "login_btn": "Inicia la sessió",
+    "register_title": "Crear Compte",
+    "register_btn": "Crear Compte",
+    "email_placeholder": "el_teu@email.com",
+    "password_placeholder": "••••••••",
+    "no_account": "No tens compte?",
+    "register_link": "Registra't",
+    "have_account": "Ja tens compte?",
+    "login_link": "Inicia sessió",
+    "welcome_toast": "Benvingut {{email}}!",
+    "security_questions": {
+      "pet_name": "Quin és el nom de la teva primera mascota?",
+      "birth_city": "A quina ciutat vas néixer?",
+      "mother_maiden_name": "Quin és el cognom de soltera de la teva mare?",
+      "first_school": "Quin va ser el nom de la teva primera escola?",
+      "favorite_food": "Quin és el teu menjar preferit?",
+      "childhood_street": "A quin carrer vivies quan eres petit?",
+      "best_friend": "Quin és el nom del teu millor amic de la infància?"
+    }
+  },
+  "onboarding": {
+    "step1_title": "Selecciona la teva zona",
+    "step1_desc": "Per mostrar-te els millors esdeveniments a prop teu",
+    "search_community": "Cerca comunitat...",
+    "step2_title": "Què et mou?",
+    "step2_desc": "Selecciona els teus estils preferits",
+    "back_btn": "Enrere",
+    "start_btn": "Començar!",
+    "error_select_community": "Selecciona una comunitat"
+  },
+  "sidebar": {
+    "home": "Inici",
+    "events": "Esdeveniments",
+    "calendar": "Calendari",
+    "chat": "Xat",
+    "profile": "Perfil",
+    "logout": "Tancar sessió"
+  },
+  "home": {
+    "welcome": "Hola, {{name}}",
+    "featured_title": "Esdeveniments Destacats",
+    "near_you_title": "A prop teu",
+    "join_btn": "Apuntar-m'hi",
+    "leave_btn": "Sortir",
+    "load_more": "Carregar més esdeveniments",
+    "loading": "Carregant..."
+  },
+  "events_page": {
+    "title": "Esdeveniments Disponibles",
+    "subtitle": "Troba la teva propera festa",
+    "search_placeholder": "Cerca per nom...",
+    "no_results": "No hem trobat esdeveniments",
+    "no_results_desc": "No hi ha resultats per a \"{{search}}\" a la categoria \"{{category}}\".",
+    "clear_filters": "Netejar filtres",
+    "price_free": "Gratuït",
+    "cta_join": "Apuntar-m'hi",
+    "cta_joined": "Ja estàs apuntat"
+  },
+  "calendar": {
+    "title_part1": "El teu Calendari",
+    "title_part2": "Nocturn",
+    "selected_date": "Data seleccionada",
+    "select_day": "Selecciona un dia",
+    "your_plans": "Els teus Plans",
+    "suggestions": "Suggeriments per a tu",
+    "no_plans": "No tens plans confirmats per a aquest dia.",
+    "view_all": "Veure tots els esdeveniments",
+    "go_to_event": "Anar a l'esdeveniment"
+  },
+  "dictionary": {
+    "el": "el", "la": "la", "los": "els", "las": "les", "un": "un", "una": "una", "unos": "uns", "unas": "unes",
+    "de": "de", "del": "del", "a": "a", "al": "al", "en": "a", "con": "amb", "sin": "sense", "por": "per", "para": "per a",
+    "y": "i", "o": "o", "pero": "però", "porque": "perquè", "si": "si", "que": "que",
+    "es": "és", "está": "està", "son": "són", "hay": "hi ha", "tiene": "té", "hacer": "fer", "ir": "anar", "venir": "venir",
+    "mi": "el meu", "tu": "el teu", "su": "el seu", "nuestro": "el nostre", "este": "aquest", "ese": "aquell", "todo": "tot", "nada": "res",
+    "muy": "molt", "más": "més", "menos": "menys", "mucho": "molt", "poco": "poc", "mejor": "millor", "peor": "pitjor",
+    "ahora": "ara", "luego": "després", "antes": "abans", "después": "després", "siempre": "sempre", "nunca": "mai",
+    "aquí": "aquí", "allí": "allí", "cerca": "a prop", "lejos": "lluny",
+
+    "fiesta": "festa", "evento": "esdeveniment", "concierto": "concert", "festival": "festival", "sesión": "sessió",
+    "noche": "nit", "día": "dia", "tarde": "tarda", "mañana": "matí", "madrugada": "matinada",
+    "música": "música", "sonido": "so", "luces": "llums", "escenario": "escenari", "pista": "pista", "baile": "ball",
+    "entrada": "entrada", "ticket": "tiquet", "gratis": "gratuït", "precio": "preu", "pago": "pagament", "taquilla": "taquilla",
+    "copa": "copa", "bebida": "beguda", "cerveza": "cervesa", "alcohol": "alcohol", "barra": "barra", "chupito": "xarrup",
+    "dj": "dj", "artista": "artista", "cantante": "cantant", "grupo": "grup", "banda": "banda", "en vivo": "en directe",
+    "increíble": "increïble", "brutal": "brutal", "único": "únic", "especial": "especial", "loco": "boig", "divertido": "divertit",
+    "grande": "gran", "pequeño": "petit", "lleno": "ple", "vacío": "buit", "aforo": "aforament", "sold out": "entrades exhaurides",
+    "centro": "centre", "ciudad": "ciutat", "sala": "sala", "club": "club", "discoteca": "discoteca", "terraza": "terrassa",
+    "vip": "vip", "reservado": "reservat", "mesa": "taula", "botella": "ampolla", "shisha": "shisha",
+    "seguridad": "seguretat", "portero": "porter", "cola": "cua", "fila": "fila", "código": "codi", "vestimenta": "vestimenta",
+    "amigos": "amics", "gente": "gent", "ambiente": "ambient", "plan": "pla", "fuego": "foc", "show": "espectacle",
+
+    "Trap": "Trap", "Reagge": "Reggae", "Edgy": "Edgy", "Tecno": "Techno", "Reaggeton": "Reggaeton", "House": "House", 
+    "Loofy": "Lo-Fi", "Funk": "Funk", "Pop": "Pop", "Indie": "Indie", "Rock": "Rock", "Metal": "Metal", "Trendy": "Trendy", "Pop con ñ": "Pop Espanyol",
+    "Todos": "Tots",
+    "Andalucía": "Andalusia", "Aragón": "Aragó", "Principado de Asturias": "Principat d'Astúries", 
+    "Illes Balears": "Illes Balears", "Canarias": "Canàries", "Cantabria": "Cantàbria", 
+    "Castilla-La Mancha": "Castella-La Manxa", "Castilla y León": "Castella i Lleó", "Cataluña": "Catalunya", 
+    "Comunitat Valenciana": "Comunitat Valenciana", "Extremadura": "Extremadura", "Galicia": "Galícia", 
+    "Comunidad de Madrid": "Comunitat de Madrid", "Región de Murcia": "Regió de Múrcia", 
+    "Comunidad Foral de Navarra": "Navarra", "País Vasco": "País Basc", "La Rioja": "La Rioja", 
+    "Ciudad Autónoma de Ceuta": "Ceuta", "Ciudad Autónoma de Melilla": "Melilla"
+  }
+}

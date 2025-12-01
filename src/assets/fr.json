@@ -1,0 +1,107 @@
+{
+  "auth": {
+    "login_title": "Se connecter",
+    "login_btn": "Se connecter",
+    "register_title": "Créer un compte",
+    "register_btn": "Créer un compte",
+    "email_placeholder": "votre@email.com",
+    "password_placeholder": "••••••••",
+    "no_account": "Pas de compte ?",
+    "register_link": "S'inscrire",
+    "have_account": "Déjà un compte ?",
+    "login_link": "Connectez-vous",
+    "welcome_toast": "Bienvenue {{email}} !",
+    "security_questions": {
+      "pet_name": "Quel est le nom de votre premier animal ?",
+      "birth_city": "Dans quelle ville êtes-vous né ?",
+      "mother_maiden_name": "Quel est le nom de jeune fille de votre mère ?",
+      "first_school": "Quel était le nom de votre première école ?",
+      "favorite_food": "Quel est votre plat préféré ?",
+      "childhood_street": "Dans quelle rue avez-vous grandi ?",
+      "best_friend": "Quel est le nom de votre meilleur ami d'enfance ?"
+    }
+  },
+  "onboarding": {
+    "step1_title": "Sélectionnez votre région",
+    "step1_desc": "Pour afficher les meilleurs événements près de chez vous",
+    "search_community": "Rechercher une région...",
+    "step2_title": "Qu'est-ce qui vous fait bouger ?",
+    "step2_desc": "Sélectionnez vos styles préférés",
+    "back_btn": "Retour",
+    "start_btn": "C'est parti !",
+    "error_select_community": "Sélectionnez une région"
+  },
+  "sidebar": {
+    "home": "Accueil",
+    "events": "Événements",
+    "calendar": "Calendrier",
+    "chat": "Chat",
+    "profile": "Profil",
+    "logout": "Se déconnecter"
+  },
+  "home": {
+    "welcome": "Bonjour, {{name}}",
+    "featured_title": "Événements en vedette",
+    "near_you_title": "Près de chez vous",
+    "join_btn": "Rejoindre",
+    "leave_btn": "Quitter",
+    "load_more": "Charger plus d'événements",
+    "loading": "Chargement..."
+  },
+  "events_page": {
+    "title": "Événements Disponibles",
+    "subtitle": "Trouvez votre prochaine fête",
+    "search_placeholder": "Recherche par nom...",
+    "no_results": "Aucun événement trouvé",
+    "no_results_desc": "Aucun résultat pour \"{{search}}\" dans la catégorie \"{{category}}\".",
+    "clear_filters": "Effacer les filtres",
+    "price_free": "Gratuit",
+    "cta_join": "Rejoindre",
+    "cta_joined": "Rejoint"
+  },
+  "calendar": {
+    "title_part1": "Votre Calendrier",
+    "title_part2": "Nocturne",
+    "selected_date": "Date sélectionnée",
+    "select_day": "Sélectionnez un jour",
+    "your_plans": "Vos Projets",
+    "suggestions": "Suggestions pour vous",
+    "no_plans": "Vous n'avez pas de projets confirmés pour ce jour.",
+    "view_all": "Voir tous les événements",
+    "go_to_event": "Aller à l'événement"
+  },
+  "dictionary": {
+    "el": "le", "la": "la", "los": "les", "las": "les", "un": "un", "una": "une", "unos": "des", "unas": "des",
+    "de": "de", "del": "du", "a": "à", "al": "au", "en": "en", "con": "avec", "sin": "sans", "por": "par", "para": "pour",
+    "y": "et", "o": "ou", "pero": "mais", "porque": "parce que", "si": "si", "que": "que",
+    "es": "est", "está": "est", "son": "sont", "hay": "il y a", "tiene": "a", "hacer": "faire", "ir": "aller", "venir": "venir",
+    "mi": "mon", "tu": "ton", "su": "son", "nuestro": "notre", "este": "ce", "ese": "ce", "todo": "tout", "nada": "rien",
+    "muy": "très", "más": "plus", "menos": "moins", "mucho": "beaucoup", "poco": "peu", "mejor": "mieux", "peor": "pire",
+    "ahora": "maintenant", "luego": "plus tard", "antes": "avant", "después": "après", "siempre": "toujours", "nunca": "jamais",
+    "aquí": "ici", "allí": "là-bas", "cerca": "près", "lejos": "loin",
+
+    "fiesta": "fête", "evento": "événement", "concierto": "concert", "festival": "festival", "sesión": "session",
+    "noche": "nuit", "día": "jour", "tarde": "après-midi", "mañana": "matin", "madrugada": "aube",
+    "música": "musique", "sonido": "son", "luces": "lumières", "escenario": "scène", "pista": "piste", "baile": "danse",
+    "entrada": "billet", "ticket": "ticket", "gratis": "gratuit", "precio": "prix", "pago": "paiement", "taquilla": "billetterie",
+    "copa": "verre", "bebida": "boisson", "cerveza": "bière", "alcohol": "alcool", "barra": "bar", "chupito": "shot",
+    "dj": "dj", "artista": "artiste", "cantante": "chanteur", "grupo": "groupe", "banda": "bande", "en vivo": "en direct",
+    "increíble": "incroyable", "brutal": "génial", "único": "unique", "especial": "spécial", "loco": "fou", "divertido": "amusant",
+    "grande": "grand", "pequeño": "petit", "lleno": "plein", "vacío": "vide", "aforo": "capacité", "sold out": "complet",
+    "centro": "centre", "ciudad": "ville", "sala": "salle", "club": "club", "discoteca": "discothèque", "terraza": "terrasse",
+    "vip": "vip", "reservado": "réservé", "mesa": "table", "botella": "bouteille", "shisha": "chicha",
+    "seguridad": "sécurité", "portero": "videur", "cola": "queue", "fila": "file", "código": "code", "vestimenta": "tenue",
+    "amigos": "amis", "gente": "gens", "ambiente": "ambiance", "plan": "plan", "fuego": "feu", "show": "spectacle",
+
+    "Trap": "Trap", "Reagge": "Reggae", "Edgy": "Edgy", "Tecno": "Techno", "Reaggeton": "Reggaeton", "House": "House", 
+    "Loofy": "Lo-Fi", "Funk": "Funk", "Pop": "Pop", "Indie": "Indé", "Rock": "Rock", "Metal": "Metal", "Trendy": "Tendance", "Pop con ñ": "Pop Espagnol",
+    "Todos": "Tous",
+    "Andalucía": "Andalousie", "Aragón": "Aragon", "Principado de Asturias": "Principauté des Asturies", 
+    "Illes Balears": "Îles Baléares", "Canarias": "Îles Canaries", "Cantabria": "Cantabrie", 
+    "Castilla-La Mancha": "Castille-La Manche", "Castilla y León": "Castille-et-León", "Cataluña": "Catalogne", 
+    "Comunitat Valenciana": "Communauté Valencienne", "Extremadura": "Estrémadure", "Galicia": "Galice", 
+    "Comunidad de Madrid": "Communauté de Madrid", "Región de Murcia": "Région de Murcie", 
+    "Comunidad Foral de Navarra": "Navarre", "País Vasco": "Pays Basque", "La Rioja": "La Rioja", 
+    "Ciudad Autónoma de Ceuta": "Ceuta", "Ciudad Autónoma de Melilla": "Melilla"
+  }
+}
