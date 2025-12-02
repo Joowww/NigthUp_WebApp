@@ -1,0 +1,101 @@
+{
+  "auth": {
+    "login_title": "Log In",
+    "login_btn": "Log In",
+    "register_title": "Create Account",
+    "register_btn": "Create Account",
+    "email_placeholder": "your@email.com",
+    "password_placeholder": "••••••••",
+    "no_account": "Don't have an account?",
+    "register_link": "Register",
+    "have_account": "Already have an account?",
+    "login_link": "Log in",
+    "welcome_toast": "Welcome {{email}}!",
+    "security_questions": {
+      "pet_name": "What is the name of your first pet?",
+      "birth_city": "In what city were you born?",
+      "mother_maiden_name": "What is your mother's maiden name?",
+      "first_school": "What was the name of your first school?",
+      "favorite_food": "What is your favorite food?",
+      "childhood_street": "What street did you grow up on?",
+      "best_friend": "What is the name of your childhood best friend?"
+    }
+  },
+  "onboarding": {
+    "step1_title": "Select your region",
+    "step1_desc": "To show you the best events near you",
+    "search_community": "Search region...",
+    "step2_title": "What moves you?",
+    "step2_desc": "Select your favorite styles",
+    "back_btn": "Back",
+    "start_btn": "Get Started!",
+    "error_select_community": "Select a region"
+  },
+  "sidebar": {
+    "home": "Home",
+    "events": "Events",
+    "calendar": "Calendar",
+    "chat": "Chat",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "home": {
+    "welcome": "Hello, {{name}}",
+    "featured_title": "Featured Events",
+    "near_you_title": "Near You",
+    "join_btn": "Join",
+    "leave_btn": "Leave",
+    "load_more": "Load more events"
+  },
+  "events_page": {
+    "title": "Available Events",
+    "subtitle": "Find your next party",
+    "search_placeholder": "Search by name...",
+    "no_results": "No events found",
+    "clear_filters": "Clear filters",
+    "price_free": "Free"
+  },
+  "calendar": {
+    "title_part1": "Your Night",
+    "title_part2": "Calendar",
+    "selected_date": "Selected date",
+    "your_plans": "Your Plans",
+    "suggestions": "Suggestions for you",
+    "no_plans": "You have no confirmed plans.",
+    "view_all": "View all events"
+  },
+  "dictionary": {
+    "el": "the", "la": "the", "los": "the", "las": "the", "un": "a", "una": "a", "unos": "some", "unas": "some",
+    "de": "of", "del": "of the", "a": "to", "al": "to the", "en": "in", "con": "with", "sin": "without", "por": "by", "para": "for",
+    "y": "and", "o": "or", "pero": "but", "porque": "because", "si": "if", "que": "that",
+    "es": "is", "está": "is", "son": "are", "hay": "there is", "tiene": "has", "hacer": "to make", "ir": "to go", "venir": "to come",
+    "mi": "my", "tu": "your", "su": "his/her", "nuestro": "our", "este": "this", "ese": "that", "todo": "all", "nada": "nothing",
+    "muy": "very", "más": "more", "menos": "less", "mucho": "much", "poco": "little", "mejor": "better", "peor": "worse",
+    "ahora": "now", "luego": "later", "antes": "before", "después": "after", "siempre": "always", "nunca": "never",
+    "aquí": "here", "allí": "there", "cerca": "near", "lejos": "far",
+
+    "fiesta": "party", "evento": "event", "concierto": "concert", "festival": "festival", "sesión": "session",
+    "noche": "night", "día": "day", "tarde": "afternoon", "mañana": "morning", "madrugada": "dawn",
+    "música": "music", "sonido": "sound", "luces": "lights", "escenario": "stage", "pista": "dancefloor", "baile": "dance",
+    "entrada": "ticket", "ticket": "ticket", "gratis": "free", "precio": "price", "pago": "payment", "taquilla": "box office",
+    "copa": "drink", "bebida": "drink", "cerveza": "beer", "alcohol": "alcohol", "barra": "bar", "chupito": "shot",
+    "dj": "dj", "artista": "artist", "cantante": "singer", "grupo": "group", "banda": "band", "en vivo": "live",
+    "increíble": "amazing", "brutal": "awesome", "único": "unique", "especial": "special", "loco": "crazy", "divertido": "fun",
+    "grande": "big", "pequeño": "small", "lleno": "full", "vacío": "empty", "aforo": "capacity", "sold out": "sold out",
+    "centro": "downtown", "ciudad": "city", "sala": "hall", "club": "club", "discoteca": "club", "terraza": "terrace",
+    "vip": "vip", "reservado": "private area", "mesa": "table", "botella": "bottle", "shisha": "shisha",
+    "seguridad": "security", "portero": "bouncer", "cola": "queue", "fila": "line", "código": "code", "vestimenta": "dress",
+    "amigos": "friends", "gente": "people", "ambiente": "vibe", "plan": "plan", "fuego": "fire", "show": "show",
+
+    "Trap": "Trap", "Reagge": "Reggae", "Edgy": "Edgy", "Tecno": "Techno", "Reaggeton": "Reggaeton", "House": "House", 
+    "Loofy": "Lo-Fi", "Funk": "Funk", "Pop": "Pop", "Indie": "Indie", "Rock": "Rock", "Metal": "Metal", "Trendy": "Trendy", "Pop con ñ": "Spanish Pop",
+    "Todos": "All",
+    "Andalucía": "Andalusia", "Aragón": "Aragon", "Principado de Asturias": "Principality of Asturias", 
+    "Illes Balears": "Balearic Islands", "Canarias": "Canary Islands", "Cantabria": "Cantabria", 
+    "Castilla-La Mancha": "Castilla-La Mancha", "Castilla y León": "Castilla y León", "Cataluña": "Catalonia", 
+    "Comunitat Valenciana": "Valencian Community", "Extremadura": "Extremadura", "Galicia": "Galicia", 
+    "Comunidad de Madrid": "Community of Madrid", "Región de Murcia": "Region of Murcia", 
+    "Comunidad Foral de Navarra": "Navarre", "País Vasco": "Basque Country", "La Rioja": "La Rioja", 
+    "Ciudad Autónoma de Ceuta": "Ceuta", "Ciudad Autónoma de Melilla": "Melilla"
+  }
+}

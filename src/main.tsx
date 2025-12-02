@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthProvider';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ThemeProvider } from 'next-themes';
+import './i18n';
 
 createRoot(document.getElementById('root')!).render(//busca el elemento con id root en el html
   //el cual es dnd va a inyectar la app/web

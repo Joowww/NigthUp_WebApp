@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SimpleSidebar } from '../ui/simpleSidebar'; // Asegura que la ruta es correcta
 import { Menu } from 'lucide-react';
+import { FloatingHelp } from './FloatingHelp'; // <--- IMPORTAR
 
 export const SimpleLayout: React.FC = () => {
   // Este estado controla si el sidebar se ve o no (tanto en móvil como desktop)
@@ -56,8 +57,8 @@ export const SimpleLayout: React.FC = () => {
 
            <Outlet />
         </div>
-
       </main>
+    <FloatingHelp />
     </div>
   );
 };

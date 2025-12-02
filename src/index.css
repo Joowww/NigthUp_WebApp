@@ -250,3 +250,50 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(330 100% 50% / 0.7);
 }
+
+/* --- ACCESIBILIDAD Y CONCIENCIA DIGITAL --- */
+
+/* Modo Texto Grande */
+body.large-text {
+  font-size: 110%; /* Aumenta todo un 10% */
+}
+
+/* Modo Calma (Desactiva neones fuertes y animaciones) */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  /* Opcional: Quitar los blurs neón para vista cansada */
+  filter: none !important; 
+  backdrop-filter: none !important;
+}
+
+/* =========================================
+   CONCIENCIA DIGITAL Y ACCESIBILIDAD
+   ========================================= */
+
+/* 1. MODO LECTURA: Aumenta el tamaño base */
+html.large-text {
+  font-size: 120% !important; /* Aumenta un 20% el tamaño base */
+}
+
+/* 2. MODO CALMA: Desactiva TODO el movimiento */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  /* Detiene animaciones CSS (spinners, rebotes) */
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Opcional: En modo calma, quitamos los efectos "Blur" (neón borroso) */
+html.reduce-motion .blur-sm,
+html.reduce-motion .backdrop-blur-md,
+html.reduce-motion .backdrop-blur-xl {
+  filter: none !important;
+  backdrop-filter: none !important;
+  background-color: rgba(15, 15, 15, 0.95); /* Fondo sólido para que se lea bien */
+}

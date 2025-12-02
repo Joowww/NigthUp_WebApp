@@ -9,7 +9,7 @@ import { Calendar } from '../../ui/calendar';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
-import { MapPin, Clock, Users, Calendar as CalendarIcon, ArrowRight, Loader2 } from 'lucide-react';
+import { MapPin, Clock, Calendar as CalendarIcon, ArrowRight, Loader2 } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -79,7 +79,8 @@ export function CalendarPage() {
 
   return (
     <div className="min-h-screen w-full bg-background px-4 py-8 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+      {/* CAMBIO: Eliminado mx-auto y aumentado max-w para que sea 'bastante ancho' y a la izquierda */}
+      <div className="w-full max-w-[95%] ml-0">
         
         <h1 className="mb-8 text-3xl font-bold text-white">
           Tu Calendario <span className="text-[#ff0080]">Nocturno</span>
@@ -88,29 +89,15 @@ export function CalendarPage() {
         <div className="grid gap-8 lg:grid-cols-12">
           
           {/* --- COLUMNA IZQUIERDA: EL CALENDARIO --- */}
-          <div className="lg:col-span-5 xl:col-span-4">
-            <Card className="border-0 bg-[#1a1a1a] shadow-xl shadow-black/40">
-              <CardContent className="p-4 flex justify-center">
+          {/* CAMBIO: Aumentado col-span a 8 para que sea mucho más ancho */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <Card className="border-0 bg-transparent shadow-none">
+              <CardContent className="p-0 flex justify-center">
                 <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  locale={es} // Calendario en español
-                  className="rounded-md border-none text-white"
-                  // Resaltar días con eventos
-                  modifiers={{ hasEvent: daysWithEvents }}
-                  modifiersStyles={{
-                    hasEvent: { 
-                      fontWeight: 'bold', 
-                      textDecoration: 'underline',
-                      textDecorationColor: '#ff0080',
-                      textUnderlineOffset: '4px'
-                    }
-                  }}
-                  classNames={{
-                    day_selected: "bg-[#ff0080] text-white hover:bg-[#ff0080]/80 focus:bg-[#ff0080]",
-                    day_today: "bg-white/10 text-white",
-                  }}
+                  selectedDate={date}
+                  onDateSelect={(newDate) => setDate(newDate)}
+                  eventDates={daysWithEvents}
+                  className="w-full"
                 />
               </CardContent>
             </Card>
@@ -130,7 +117,8 @@ export function CalendarPage() {
           </div>
 
           {/* --- COLUMNA DERECHA: LOS EVENTOS --- */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
+          {/* CAMBIO: Reducido col-span para dar espacio al calendario */}
+          <div className="lg:col-span-4 xl:col-span-3 space-y-8">
             
             {loading ? (
               <div className="flex h-40 items-center justify-center">
@@ -159,7 +147,6 @@ export function CalendarPage() {
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" /> 
-                                  {/* Placeholder para location name */}
                                   Club
                                 </span>
                               </div>
@@ -169,7 +156,7 @@ export function CalendarPage() {
                               variant="outline"
                               className="border-[#00d9ff] text-[#00d9ff] hover:bg-[#00d9ff] hover:text-black"
                             >
-                              Ir al evento <ArrowRight className="ml-2 h-4 w-4" />
+                              <ArrowRight className="h-4 w-4" />
                             </Button>
                           </CardContent>
                         </Card>
@@ -191,7 +178,7 @@ export function CalendarPage() {
                     <div className="grid gap-4">
                       {suggestedEvents.map(event => (
                         <Card key={event._id} className="group overflow-hidden border-0 bg-[#0f0f0f] transition-all hover:bg-[#151515]">
-                          <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+                          <CardContent className="flex flex-col gap-4 p-4">
                             
                             {/* Info Evento */}
                             <div className="flex items-center gap-4">
@@ -217,10 +204,6 @@ export function CalendarPage() {
                                     <Clock className="h-3 w-3" />
                                     {format(new Date(event.schedule), 'HH:mm')}
                                   </span>
-                                  <span className="flex items-center gap-1">
-                                    <Users className="h-3 w-3" />
-                                    {event.participants?.length || 0}
-                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -228,7 +211,7 @@ export function CalendarPage() {
                             {/* Botón Unirse */}
                             <Button 
                               onClick={() => handleJoinToggle(event)}
-                              className="w-full sm:w-auto bg-gradient-to-r from-[#ff0080] to-[#7928ca] text-white hover:opacity-90 transition-opacity"
+                              className="w-full bg-gradient-to-r from-[#ff0080] to-[#7928ca] text-white hover:opacity-90 transition-opacity"
                             >
                               Unirse
                             </Button>
@@ -241,7 +224,7 @@ export function CalendarPage() {
                       <p className="text-gray-500">No hay otros eventos disponibles para este día.</p>
                       <Button 
                         variant="link" 
-                        onClick={() => setDate(undefined)} // Limpiar filtro fecha
+                        onClick={() => navigate('/events')} 
                         className="mt-2 text-[#ff0080]"
                       >
                         Ver todos los eventos

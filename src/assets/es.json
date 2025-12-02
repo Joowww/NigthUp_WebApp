@@ -1,0 +1,104 @@
+{
+  "auth": {
+    "login_title": "Iniciar Sesión",
+    "login_btn": "Iniciar Sesión",
+    "register_title": "Crear Cuenta",
+    "register_btn": "Crear Cuenta",
+    "email_placeholder": "tu@email.com",
+    "password_placeholder": "••••••••",
+    "no_account": "¿No tienes cuenta?",
+    "register_link": "Regístrate",
+    "have_account": "¿Ya tienes cuenta?",
+    "login_link": "Inicia sesión",
+    "welcome_toast": "¡Bienvenido {{email}}!",
+    "security_questions": {
+      "pet_name": "¿Cuál es el nombre de tu primera mascota?",
+      "birth_city": "¿En qué ciudad naciste?",
+      "mother_maiden_name": "¿Cuál es el nombre de soltera de tu madre?",
+      "first_school": "¿Cuál fue el nombre de tu primera escuela?",
+      "favorite_food": "¿Cuál es tu comida favorita?",
+      "childhood_street": "¿En qué calle vivías cuando eras niño?",
+      "best_friend": "¿Cuál es el nombre de tu mejor amigo de la infancia?"
+    }
+  },
+  "onboarding": {
+    "step1_title": "Selecciona tu zona",
+    "step1_desc": "Para mostrarte los mejores eventos cerca de ti",
+    "search_community": "Buscar comunidad...",
+    "step2_title": "¿Qué te mueve?",
+    "step2_desc": "Selecciona tus estilos favoritos",
+    "back_btn": "Atrás",
+    "start_btn": "¡Empezar!",
+    "error_select_community": "Selecciona una comunidad"
+  },
+  "sidebar": {
+    "home": "Inicio",
+    "events": "Eventos",
+    "calendar": "Calendario",
+    "chat": "Chat",
+    "profile": "Perfil",
+    "logout": "Cerrar sesión"
+  },
+  "home": {
+    "welcome": "Hola, {{name}}",
+    "featured_title": "Eventos Destacados",
+    "near_you_title": "Cerca de ti",
+    "join_btn": "Unirse",
+    "leave_btn": "Salirse",
+    "load_more": "Cargar más eventos"
+  },
+  "events_page": {
+    "title": "Eventos Disponibles",
+    "subtitle": "Encuentra tu próxima fiesta",
+    "search_placeholder": "Buscar por nombre...",
+    "no_results": "No encontramos eventos",
+    "clear_filters": "Limpiar filtros",
+    "price_free": "Gratis"
+  },
+  "calendar": {
+    "title_part1": "Tu Calendario",
+    "title_part2": "Nocturno",
+    "selected_date": "Fecha seleccionada",
+    "your_plans": "Tus Planes",
+    "suggestions": "Sugerencias para ti",
+    "no_plans": "No tienes planes confirmados.",
+    "view_all": "Ver todos los eventos"
+  },
+  "dictionary": {
+    "_comment": "--- GRAMÁTICA BÁSICA (Para frases backend) ---",
+    "el": "el", "la": "la", "los": "los", "las": "las", "un": "un", "una": "una", "unos": "unos", "unas": "unas",
+    "de": "de", "del": "del", "a": "a", "al": "al", "en": "en", "con": "con", "sin": "sin", "por": "por", "para": "para",
+    "y": "y", "o": "o", "pero": "pero", "porque": "porque", "si": "si", "que": "que",
+    "es": "es", "está": "está", "son": "son", "hay": "hay", "tiene": "tiene", "hacer": "hacer", "ir": "ir", "venir": "venir",
+    "mi": "mi", "tu": "tu", "su": "su", "nuestro": "nuestro", "este": "este", "ese": "ese", "todo": "todo", "nada": "nada",
+    "muy": "muy", "más": "más", "menos": "menos", "mucho": "mucho", "poco": "poco", "mejor": "mejor", "peor": "peor",
+    "ahora": "ahora", "luego": "luego", "antes": "antes", "después": "después", "siempre": "siempre", "nunca": "nunca",
+    "aquí": "aquí", "allí": "allí", "cerca": "cerca", "lejos": "lejos",
+
+    "_comment2": "--- VOCABULARIO FIESTA/EVENTOS ---",
+    "fiesta": "fiesta", "evento": "evento", "concierto": "concierto", "festival": "festival", "sesión": "sesión",
+    "noche": "noche", "día": "día", "tarde": "tarde", "mañana": "mañana", "madrugada": "madrugada",
+    "música": "música", "sonido": "sonido", "luces": "luces", "escenario": "escenario", "pista": "pista", "baile": "baile",
+    "entrada": "entrada", "ticket": "ticket", "gratis": "gratis", "precio": "precio", "pago": "pago", "taquilla": "taquilla",
+    "copa": "copa", "bebida": "bebida", "cerveza": "cerveza", "alcohol": "alcohol", "barra": "barra", "chupito": "chupito",
+    "dj": "dj", "artista": "artista", "cantante": "cantante", "grupo": "grupo", "banda": "banda", "en vivo": "en vivo",
+    "increíble": "increíble", "brutal": "brutal", "único": "único", "especial": "especial", "loco": "loco", "divertido": "divertido",
+    "grande": "grande", "pequeño": "pequeño", "lleno": "lleno", "vacío": "vacío", "aforo": "aforo", "sold out": "sold out",
+    "centro": "centro", "ciudad": "ciudad", "sala": "sala", "club": "club", "discoteca": "discoteca", "terraza": "terraza",
+    "vip": "vip", "reservado": "reservado", "mesa": "mesa", "botella": "botella", "shisha": "shisha",
+    "seguridad": "seguridad", "portero": "portero", "cola": "cola", "fila": "fila", "código": "código", "vestimenta": "vestimenta",
+    "amigos": "amigos", "gente": "gente", "ambiente": "ambiente", "plan": "plan", "fuego": "fuego", "show": "show",
+
+    "_comment3": "--- CATEGORÍAS Y LUGARES (Tus datos fijos) ---",
+    "Trap": "Trap", "Reagge": "Reggae", "Edgy": "Edgy", "Tecno": "Techno", "Reaggeton": "Reggaeton", "House": "House", 
+    "Loofy": "Lo-Fi", "Funk": "Funk", "Pop": "Pop", "Indie": "Indie", "Rock": "Rock", "Metal": "Metal", "Trendy": "Trendy", "Pop con ñ": "Pop Español",
+    "Todos": "Todos",
+    "Andalucía": "Andalucía", "Aragón": "Aragón", "Principado de Asturias": "Principado de Asturias", 
+    "Illes Balears": "Islas Baleares", "Canarias": "Canarias", "Cantabria": "Cantabria", 
+    "Castilla-La Mancha": "Castilla-La Mancha", "Castilla y León": "Castilla y León", "Cataluña": "Cataluña", 
+    "Comunitat Valenciana": "Comunidad Valenciana", "Extremadura": "Extremadura", "Galicia": "Galicia", 
+    "Comunidad de Madrid": "Comunidad de Madrid", "Región de Murcia": "Región de Murcia", 
+    "Comunidad Foral de Navarra": "Navarra", "País Vasco": "País Vasco", "La Rioja": "La Rioja", 
+    "Ciudad Autónoma de Ceuta": "Ceuta", "Ciudad Autónoma de Melilla": "Melilla"
+  }
+}
