@@ -3,75 +3,89 @@ import { ChatList } from './ChatList';
 import { ChatConversation } from './ChatConversation';
 import { useAuth } from '../../hooks/useAuth';
 import { useSocket } from '../../hooks/useSocket';
-import axios from 'axios';
+import api from '../../api';
+import { Search, X, MessageSquarePlus, Loader2 } from 'lucide-react';
 import type { 
   IConversationFormatted, 
   IMessageFormatted,
   SocketNewMessageEvent,
-  SocketMessageEditedEvent 
+  SocketMessageEditedEvent,
+  SocketMessageDeletedEvent,
+  SocketMessageReactedEvent,
+  SocketUserTypingEvent
 } from '../../modules/chat';
+import type { User } from '../../modules/user';
 
 export function ChatPage() {
   const { user } = useAuth();
   const socket = useSocket();
+  
+  // Estados de Chat
   const [chats, setChats] = useState<IConversationFormatted[]>([]);
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, IMessageFormatted[]>>({});
   const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({});
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
+  
+  // Estados de Búsqueda
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearchingLoading, setIsSearchingLoading] = useState(false);
 
   // Función helper para transformar mensaje del socket al formato del frontend
   const transformSocketMessage = (socketMessage: SocketNewMessageEvent | SocketMessageEditedEvent): IMessageFormatted => {
     return {
       id: socketMessage._id,
-      sender: typeof socketMessage.sender === 'string' 
-        ? socketMessage.sender 
-        : { ...socketMessage.sender },
+      sender: socketMessage.sender,
       text: socketMessage.isDeleted ? 'Mensaje eliminado' : socketMessage.text,
       createdAt: socketMessage.createdAt,
       isEdited: socketMessage.isEdited,
       isDeleted: socketMessage.isDeleted,
-      replyTo: typeof socketMessage.replyTo === 'string' 
-        ? { text: 'Mensaje referenciado', sender: socketMessage.replyTo } 
-        : socketMessage.replyTo,
+      replyTo: !socketMessage.replyTo 
+        ? undefined 
+        : typeof socketMessage.replyTo === 'string'
+          ? undefined
+          : socketMessage.replyTo,
       reactions: socketMessage.reactions,
       read: socketMessage.readBy.length > 1
     };
   };
 
-  // Cargar conversaciones
+  // 1. Cargar conversaciones iniciales
   useEffect(() => {
-    const fetchConversations = async () => {
+    if (!user?._id) return;
+
+    const loadChats = async () => {
+      setIsLoadingChats(true);
       try {
-        const response = await axios.get('/api/chat', {
-          headers: { Authorization: `Bearer ${user?.token}` },
-        });
-        setChats(response.data);
+        const { data } = await api.get('/chat');
+        setChats(data || []);
       } catch (error) {
-        console.error('Error fetching conversations:', error);
+        console.error('Error cargando chats:', error);
+        setChats([]);
+      } finally {
+        setIsLoadingChats(false);
       }
     };
 
-    if (user?.token) {
-      fetchConversations();
-    }
-  }, [user?.token]);
+    loadChats();
+  }, [user?._id]);
 
-  // Configurar listeners de socket
+  // 2. Configurar listeners de socket
   useEffect(() => {
-    if (!socket.isConnected()) return;
+    if (!socket || !socket.isConnected()) return;
 
     // Nuevo mensaje
-    socket.onNewMessage((message) => {
+    const handleNewMessage = (message: SocketNewMessageEvent) => {
       const conversationId = message.conversation;
       const formattedMessage = transformSocketMessage(message);
 
-      // Actualizar mensajes si estamos viendo esa conversación
       setMessages((prev) => ({
         ...prev,
         [conversationId]: [...(prev[conversationId] || []), formattedMessage],
       }));
 
-      // Actualizar última actividad en la lista de chats
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === conversationId
@@ -79,15 +93,15 @@ export function ChatPage() {
                 ...chat,
                 lastMessage: message.text,
                 lastMessageTime: message.createdAt,
-                unreadCount: selectedChat === conversationId ? 0 : (chat.unreadCount || 0) + 1,
+                unreadCount: selectedChatId === conversationId ? 0 : (chat.unreadCount || 0) + 1,
               }
             : chat
         )
       );
-    });
+    };
 
     // Mensaje editado
-    socket.onMessageEdited((editedMessage) => {
+    const handleMessageEdited = (editedMessage: SocketMessageEditedEvent) => {
       const conversationId = editedMessage.conversation;
       const formattedMessage = transformSocketMessage(editedMessage);
 
@@ -97,10 +111,10 @@ export function ChatPage() {
           msg.id === editedMessage._id ? formattedMessage : msg
         ),
       }));
-    });
+    };
 
     // Mensaje eliminado
-    socket.onMessageDeleted(({ messageId, conversationId }) => {
+    const handleMessageDeleted = ({ messageId, conversationId }: SocketMessageDeletedEvent) => {
       if (conversationId) {
         setMessages((prev) => ({
           ...prev,
@@ -109,10 +123,10 @@ export function ChatPage() {
           ),
         }));
       }
-    });
+    };
 
     // Reacción a mensaje
-    socket.onMessageReacted(({ messageId, reactions }) => {
+    const handleMessageReacted = ({ messageId, reactions }: SocketMessageReactedEvent) => {
       setMessages((prev) => {
         const updated = { ...prev };
         Object.keys(updated).forEach((convId) => {
@@ -122,93 +136,167 @@ export function ChatPage() {
         });
         return updated;
       });
-    });
-
-    // Nuevo grupo
-    socket.onNewGroup((group) => {
-      setChats((prev) => [
-        {
-          id: group.groupId,
-          isGroup: true,
-          name: group.groupName,
-          avatar: group.groupAvatar || '',
-          lastMessage: '',
-          lastMessageTime: group.createdAt,
-          unreadCount: 0,
-        },
-        ...prev,
-      ]);
-    });
+    };
 
     // Usuario escribiendo
-    socket.onUserTyping(({ userId }) => {
-      if (selectedChat) {
-        setTypingUsers((prev) => ({
+    const handleUserTyping = ({ userId, conversationId }: SocketUserTypingEvent) => {
+      setTypingUsers((prev) => {
+        const newSet = new Set([...(prev[conversationId] || []), userId]);
+        return {
           ...prev,
-          [selectedChat]: new Set([...(prev[selectedChat] || []), userId]),
-        }));
-      }
-    });
+          [conversationId]: newSet,
+        };
+      });
+    };
 
     // Usuario dejó de escribir
-    socket.onUserStoppedTyping(({ userId }) => {
-      if (selectedChat) {
-        setTypingUsers((prev) => {
-          const newSet = new Set(prev[selectedChat] || []);
-          newSet.delete(userId);
-          return { ...prev, [selectedChat]: newSet };
-        });
-      }
-    });
+    const handleUserStoppedTyping = ({ userId, conversationId }: SocketUserTypingEvent) => {
+      setTypingUsers((prev) => {
+        const newSet = new Set(prev[conversationId] || []);
+        newSet.delete(userId);
+        return {
+          ...prev,
+          [conversationId]: newSet,
+        };
+      });
+    };
 
-    // Mensaje bloqueado por moderación
-    socket.onMessageBlocked((data) => {
-      alert(`Mensaje bloqueado: ${data.reason}`);
-    });
+    // Registrar listeners
+    socket.onNewMessage(handleNewMessage);
+    socket.onMessageEdited(handleMessageEdited);
+    socket.onMessageDeleted(handleMessageDeleted);
+    socket.onMessageReacted(handleMessageReacted);
+    socket.onUserTyping(handleUserTyping);
+    socket.onUserStoppedTyping(handleUserStoppedTyping);
 
-    // Error
-    socket.onError((error) => {
-      console.error('Socket error:', error);
-    });
-
+    // Cleanup
     return () => {
       socket.offAll();
     };
-  }, [socket, selectedChat]);
+  }, [socket, selectedChatId]);
 
-  // Cargar mensajes al seleccionar un chat
+  // 3. Cargar mensajes al seleccionar un chat
   useEffect(() => {
-    if (!selectedChat || messages[selectedChat]) return;
+    if (!selectedChatId || !user?._id) return;
+
+    // Si ya tenemos mensajes, solo unirse a la sala
+    if (messages[selectedChatId] && messages[selectedChatId].length > 0) {
+      socket?.joinRoom(selectedChatId);
+      return;
+    }
 
     const fetchMessages = async () => {
       try {
-        const response = await axios.get(`/api/chat/${selectedChat}/messages`, {
-          headers: { Authorization: `Bearer ${user?.token}` },
-        });
-        setMessages((prev) => ({ ...prev, [selectedChat]: response.data }));
-        socket.joinRoom(selectedChat);
+        const { data } = await api.get(`/chat/${selectedChatId}/messages`);
+        setMessages((prev) => ({ ...prev, [selectedChatId]: data || [] }));
+        socket?.joinRoom(selectedChatId);
       } catch (error) {
         console.error('Error fetching messages:', error);
+        setMessages((prev) => ({ ...prev, [selectedChatId]: [] }));
       }
     };
 
     fetchMessages();
 
     return () => {
-      if (selectedChat) {
-        socket.leaveRoom(selectedChat);
+      if (selectedChatId && socket) {
+        socket.leaveRoom(selectedChatId);
       }
     };
-  }, [selectedChat, user?.token, socket]);
+  }, [selectedChatId, user?._id, socket]);
 
-  const handleSendMessage = (chatId: string, text: string) => {
-    socket.sendMessage({ conversationId: chatId, text });
+  // 4. Lógica de Búsqueda de Usuarios
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      if (searchQuery.length >= 2) {
+        setIsSearchingLoading(true);
+        try {
+          const { data } = await api.get('/user', { 
+            params: { 
+              search: searchQuery,
+              limit: 10
+            } 
+          });
+          
+          const filtered = Array.isArray(data) 
+            ? data.filter((u: User) => u._id !== user?._id)
+            : [];
+            
+          setSearchResults(filtered);
+        } catch (error) {
+          console.error('Error buscando usuarios:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearchingLoading(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery, user?._id]);
+
+  // 5. Crear o Abrir Conversación
+  const handleStartChat = async (targetUserId: string) => {
+    try {
+      const existing = chats.find(c => {
+        if (c.isGroup) return false;
+        
+        return c.participants?.some((p: User | string) => {
+          const participantId = typeof p === 'string' ? p : p._id;
+          return participantId === targetUserId;
+        });
+      });
+
+      if (existing) {
+        setSelectedChatId(existing.id);
+        setIsSearching(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        return;
+      }
+
+      const { data: newChat } = await api.post('/chat', { recipientId: targetUserId });
+      
+      setChats(prev => [newChat, ...prev]);
+      setSelectedChatId(newChat.id || newChat._id);
+      setIsSearching(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      console.error('Error creando chat:', error);
+    }
   };
 
-  const handleDeleteChat = (chatId: string) => {
-    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+  // 6. Enviar Mensaje
+  const handleSendMessage = (chatId: string, text: string, replyToId?: string) => {
+    if (!socket || !socket.isConnected()) {
+      console.error('Socket no conectado');
+      return;
+    }
+    
+    socket.sendMessage({ 
+      conversationId: chatId, 
+      text,
+      ...(replyToId && { replyTo: replyToId })
+    });
   };
 
+  // 7. Eliminar Chat
+  const handleDeleteChat = async (chatId: string) => {
+    try {
+      await api.delete(`/chat/${chatId}`);
+      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      if (selectedChatId === chatId) {
+        setSelectedChatId(null);
+      }
+    } catch (error) {
+      console.error('Error eliminando chat:', error);
+    }
+  };
+
+  // 8. Fijar Chat
   const handlePinChat = (chatId: string) => {
     setChats((prev) =>
       prev.map((chat) =>
@@ -217,27 +305,117 @@ export function ChatPage() {
     );
   };
 
-  const currentChat = chats.find((chat) => chat.id === selectedChat);
-  const currentMessages = selectedChat ? messages[selectedChat] || [] : [];
+  const currentChat = chats.find(c => c.id === selectedChatId);
 
   return (
-    <div className="h-screen flex flex-col lg:flex-row bg-background">
-      <ChatList
-        chats={chats}
-        selectedChatId={selectedChat}
-        onSelectChat={setSelectedChat}
-        onDeleteChat={handleDeleteChat}
-        onPinChat={handlePinChat}
-      />
-      {selectedChat && currentChat && (
-        <ChatConversation
-          chat={{ ...currentChat, messages: currentMessages }}
-          onSendMessage={handleSendMessage}
-          onBack={() => setSelectedChat(null)}
-          currentUserId={user?.id || ''}
-          typingUsers={typingUsers[selectedChat] || new Set()} // ⬅️ Añadir esto
-        />
-      )}
+    <div className="h-[calc(100vh-4rem)] flex bg-background overflow-hidden border-t border-border/40">
+      
+      {/* SIDEBAR */}
+      <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-card ${selectedChatId ? 'hidden md:flex' : 'flex'}`}>
+        
+        {/* Buscador */}
+        <div className="p-4 border-b border-border/40">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar usuarios..."
+              className="w-full pl-9 pr-8 py-2 bg-muted/50 rounded-xl text-sm border border-transparent focus:border-primary/20 focus:bg-background focus:outline-none transition-all"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearching(true);
+              }}
+              onFocus={() => setIsSearching(true)}
+            />
+            {isSearching && (
+              <button 
+                onClick={() => { 
+                  setIsSearching(false); 
+                  setSearchQuery(''); 
+                  setSearchResults([]);
+                }}
+                className="absolute right-2 p-1 hover:bg-muted rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Lista de Resultados o Chats */}
+        <div className="flex-1 overflow-y-auto">
+          {isSearching ? (
+            <div className="p-2">
+              {isSearchingLoading && (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+              
+              {!isSearchingLoading && searchResults.length === 0 && searchQuery.length >= 2 && (
+                <p className="text-center text-sm text-muted-foreground p-8">
+                  No se encontraron usuarios.
+                </p>
+              )}
+
+              {!isSearchingLoading && searchQuery.length < 2 && (
+                <p className="text-center text-sm text-muted-foreground p-8">
+                  Escribe al menos 2 caracteres para buscar.
+                </p>
+              )}
+
+              {searchResults.map(userResult => (
+                <div
+                  key={userResult._id}
+                  onClick={() => handleStartChat(userResult._id)}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/80 cursor-pointer transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
+                    {userResult.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{userResult.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userResult.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : isLoadingChats ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <ChatList
+              chats={chats}
+              selectedChatId={selectedChatId}
+              onSelectChat={setSelectedChatId}
+              onDeleteChat={handleDeleteChat}
+              onPinChat={handlePinChat}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* CONVERSACIÓN */}
+      <div className={`flex-1 flex flex-col bg-background/50 ${!selectedChatId ? 'hidden md:flex' : 'flex'}`}>
+        {selectedChatId && currentChat ? (
+          <ChatConversation
+            chat={{ ...currentChat, messages: messages[selectedChatId] || [] }}
+            onSendMessage={handleSendMessage}
+            onBack={() => setSelectedChatId(null)}
+            currentUserId={user?._id || ''}
+            typingUsers={typingUsers[selectedChatId] || new Set()}
+          />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
+              <MessageSquarePlus className="w-10 h-10 opacity-50" />
+            </div>
+            <p className="text-sm">Selecciona un chat o busca un usuario para empezar.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

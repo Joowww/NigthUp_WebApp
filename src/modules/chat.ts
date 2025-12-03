@@ -73,12 +73,12 @@ interface IConversationFormatted {
   id: string;
   isGroup: boolean;
   name: string;
-  avatar: string;
-  lastMessage: string;
-  lastMessageTime: Date | string;
-  unreadCount?: number;
+  avatar?: string;
+  unreadCount: number;
+  lastMessage?: string;
+  lastMessageTime?: string | Date;
   isPinned?: boolean;
-  isOnline?: boolean;
+  participants: (User | string)[]; 
 }
 
 interface IMessageFormatted {
@@ -165,12 +165,15 @@ interface SocketMessageBlockedEvent {
 
 interface SocketUserTypingEvent {
   userId: string;
+  conversationId: string;
 }
 
 interface SocketErrorEvent {
   message: string;
   details?: string;
 }
+
+
 
 // ============================================
 // EXPORTS

@@ -15,7 +15,6 @@
     # Esto "quema" la URL de la API en el código de React.
     ARG VITE_API_URL
     ENV VITE_API_URL=$VITE_API_URL
-    
     # Construimos la aplicación (Genera la carpeta /dist)
     RUN npm run build
     
