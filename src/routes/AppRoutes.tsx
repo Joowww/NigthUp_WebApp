@@ -4,13 +4,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from '../features/auth/Login';
 import { Register } from '../features/auth/Register';
 import { PrivateRoute } from './PrivateRoutes';
+import { ManagerRoute } from './ManagerRoute';
 import { SimpleLayout } from '../features/simpleLayout';
 import { HomePage } from '../features/HomePage';
-import { useAuth } from '../hooks/useAuth'; 
+import { useAuth } from '../hooks/useAuth';
 import OnboardingFlow from '../features/PreHome';
-import {EventsPage} from '../features/events/EventsPage';
+import { EventsPage } from '../features/events/EventsPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { CreatorPage } from '../features/manager/CreatorPage';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -22,8 +24,8 @@ export const AppRoutes: React.FC = () => {
         {/* Rutas públicas - siempre accesibles */}
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
-        
-                
+
+
         {/* Rutas protegidas */}
         <Route path="/*" element={
           <PrivateRoute>
@@ -37,10 +39,15 @@ export const AppRoutes: React.FC = () => {
           {/* Solo mostrar rutas anidadas si NO necesita onboarding */}
           {!needsOnboarding && (
             <>
-            <Route index element={<HomePage />} />
-            <Route path="events" element={<EventsPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="chat" element={<ChatPage />} />
+              <Route index element={<HomePage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="chat" element={<ChatPage />} />
+
+              {/* Rutas de Manager */}
+              <Route element={<ManagerRoute />}>
+                <Route path="manager" element={<CreatorPage />} />
+              </Route>
             </>
           )}
         </Route>

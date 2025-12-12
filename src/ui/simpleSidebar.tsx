@@ -1,9 +1,9 @@
 // src/components/SimpleSidebar.tsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Music, Building2, Calendar, Heart, LogOut, ChevronLeft, MessageCircle } from 'lucide-react';
+import { Home, Music, Building2, Calendar, Heart, LogOut, ChevronLeft, MessageCircle, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import Logo from '../ui/Logo'; 
+import Logo from '../ui/Logo';
 
 interface SimpleSidebarProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     { id: '/chat', label: 'Chat', icon: MessageCircle },
     { id: '/calendar', label: 'Calendario', icon: Calendar },
     { id: '/favorites', label: 'Favoritos', icon: Heart },
+    ...(user?.role === 'manager' ? [{ id: '/manager', label: 'Panel Manager', icon: LayoutDashboard }] : []),
   ];
 
   const handleNavigation = (path: string) => {
@@ -32,7 +33,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   };
 
   const handleLogout = () => {
-    logout(); 
+    logout();
     navigate('/login');
   };
 
@@ -46,13 +47,13 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
       {/* Modal Confirmación Logout */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-card border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-                <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
-                <div className="flex gap-3 mt-4">
-                    <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-xl">Cancelar</button>
-                    <button onClick={handleLogout} className="flex-1 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">Sí, salir</button>
-                </div>
+          <div className="bg-card border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-xl">Cancelar</button>
+              <button onClick={handleLogout} className="flex-1 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">Sí, salir</button>
             </div>
+          </div>
         </div>
       )}
 
@@ -67,13 +68,13 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
         transition-transform duration-300 ease-in-out flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        
+
         {/* Header con Logo y Botón de cerrar */}
         <div className="p-6 border-b border-border/50 flex justify-between items-center">
           <Logo className="text-2xl" />
-          
+
           {/* BOTÓN PARA ESCONDER SIDEBAR */}
-          <button 
+          <button
             onClick={onToggle}
             className="hidden lg:flex p-1 hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white"
             title="Ocultar menú"
@@ -104,7 +105,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
         <div className="p-4 border-t border-border/50 bg-black/20">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-sm">{user?.username?.substring(0,2).toUpperCase() || 'US'}</span>
+              <span className="text-white font-bold text-sm">{user?.username?.substring(0, 2).toUpperCase() || 'US'}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.username}</p>
