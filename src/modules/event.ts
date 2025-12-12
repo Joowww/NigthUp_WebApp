@@ -11,6 +11,8 @@ export interface Event {
   capacity: number;
   price: number;
   participants: string[];
+  imageUrl?: string; // Added imageUrl property
+
 }
 
 

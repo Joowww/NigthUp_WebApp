@@ -1,10 +1,15 @@
 // features/EventMap.tsx
 import React, { useState } from 'react';
 import type { Event } from '../modules/event';
-import { Calendar, Users, ChevronRight, MapPin } from 'lucide-react';
+import type { IBusiness } from '../modules/bussiness';
+import { MapPin, Calendar, Users, Clock, Loader, TrendingUp, ChevronRight } from 'lucide-react';
+
 
 interface EventMapProps {
   events: Event[];
+  onBoundsChange: (bounds: number[]) => void;
+
+  businesses: IBusiness[]; // Added businesses prop
 }
 
 export const EventMap: React.FC<EventMapProps> = ({ events }) => {
