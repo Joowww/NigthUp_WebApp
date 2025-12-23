@@ -19,7 +19,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const menuItems = [
     { id: '/', label: 'Inicio', icon: Home },
     { id: '/events', label: 'Eventos', icon: Music },
-    { id: '/venues', label: 'Discotecas', icon: Building2 },
+    { id: '/business', label: 'Discotecas', icon: Building2 },
     { id: '/chat', label: 'Chat', icon: MessageCircle },
     { id: '/calendar', label: 'Calendario', icon: Calendar },
     { id: '/favorites', label: 'Favoritos', icon: Heart },

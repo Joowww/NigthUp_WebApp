@@ -11,6 +11,7 @@ import OnboardingFlow from '../features/PreHome';
 import {EventsPage} from '../features/events/EventsPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { BusinessPage } from '../features/business/businessPage';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -41,6 +42,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="events" element={<EventsPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="business" element={<BusinessPage />} />
             </>
           )}
         </Route>
