@@ -1,7 +1,7 @@
 // features/business/BusinessPage.tsx
 import { useEffect, useState } from 'react';
-import { BusinessList } from './businessList';
-import { BusinessMap } from './businessMap';
+import { BusinessList } from './BusinessList';
+import { BusinessMap } from './BusinessMap';
 import { getBusinesses } from './bussinessService';
 import type { IBusiness } from '../../modules/bussiness';
 import { Button } from '../../ui/button';
@@ -58,9 +58,6 @@ export const BusinessPage: React.FC = () => {
       {activeTab === 'list' && (
         <BusinessList
           businesses={businesses}
-          onSelectBusiness={(b) => {
-            setSelectedBusiness(b);
-          }}
           onShowBusinessOnMap={handleShowBusinessOnMap}
         />
       )}

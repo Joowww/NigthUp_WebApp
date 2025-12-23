@@ -1,16 +1,14 @@
 // features/business/BusinessList.tsx
 import type { IBusiness } from '../../modules/bussiness';
-import { BusinessCard } from './businesscard';
+import { BusinessCard } from './BusinessCard';
 
 interface BusinessListProps {
   businesses: IBusiness[];
-  onSelectBusiness: (business: IBusiness) => void;
   onShowBusinessOnMap?: (business: IBusiness) => void;
 }
 
 export const BusinessList: React.FC<BusinessListProps> = ({
   businesses,
-  onSelectBusiness,
   onShowBusinessOnMap
 }) => {
   if (businesses.length === 0) {
@@ -27,7 +25,6 @@ export const BusinessList: React.FC<BusinessListProps> = ({
         <BusinessCard
           key={business._id}
           business={business}
-          onClick={() => onSelectBusiness(business)}
           onShowMap={() => onShowBusinessOnMap?.(business)}
         />
       ))}
