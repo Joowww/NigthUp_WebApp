@@ -5,6 +5,7 @@ import type { Event } from '../../modules/event';
 import { useAuth } from '../../hooks/useAuth';
 import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
 import { BusinessMap } from './BusinessMap';
+import { BusinessEvents } from './BusinessEvents';
 import { ImageWithFallback } from '../ImageWithFallback';
 
 import {
@@ -14,29 +15,26 @@ import {
   } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
-import { Card, CardContent } from '../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import {
   MapPin,
   Phone,
   Mail,
-  Calendar,
-  Users,
-  Clock,
   ExternalLink,
   Heart,
   Share2,
-  Loader2
 } from 'lucide-react';
 
 interface BusinessDetailModalProps {
   business: IBusiness | null;
   onClose: () => void;
+  hideMapTab?: boolean;
 }
 
 export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
   business,
-  onClose
+  onClose,
+  hideMapTab = false
 }) => {
   const { user, updateUser } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
@@ -45,15 +43,28 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
 
   useEffect(() => {
     if (!business) return;
-
+  
+    console.log('🏢 Business:', business.name);
+    console.log('📋 Business.events:', business.events);
+  
     const loadBusinessEvents = async () => {
       setLoading(true);
       try {
-        // Obtener todos los eventos y filtrar los de este negocio
         const response = await getEvents(0, 100);
-        const businessEvents = response.events.filter(event =>
-          business.events?.includes(event._id)
+        console.log('📦 Total eventos disponibles:', response.events.length);
+        
+        // Normalizar los IDs de eventos del negocio
+        const normalizedBusinessEventIds = (business.events || []).map(e => 
+          typeof e === 'object' && e !== null && '_id' in (e as { _id?: string }) ? (e as { _id: string })._id : e
         );
+        
+        console.log('🎯 IDs de eventos del negocio normalizados:', normalizedBusinessEventIds);
+        
+        const businessEvents = response.events.filter(event =>
+          normalizedBusinessEventIds.includes(event._id)
+        );
+        
+        console.log('✅ Eventos filtrados:', businessEvents.length, businessEvents);
         setEvents(businessEvents);
       } catch (error) {
         console.error('Error loading events:', error);
@@ -61,7 +72,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
         setLoading(false);
       }
     };
-
+  
     loadBusinessEvents();
   }, [business]);
 
@@ -83,7 +94,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
     const isJoined = isUserJoined(eventId);
 
     try {
-      // Actualizar UI optimistamente
+      // Actualizar optimistamente el estado local
       setEvents(current =>
         current.map(ev => {
           if (ev._id === eventId) {
@@ -110,86 +121,77 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
     } catch (error) {
       console.error('Error en join/leave:', error);
       alert('Hubo un error al procesar tu solicitud.');
+      
+      // Revertir el cambio optimista en caso de error
+      const response = await getEvents(0, 100);
+      const businessEvents = response.events.filter(event =>
+        business.events?.includes(event._id)
+      );
+      setEvents(businessEvents);
     }
-  };
-
-  const formatDate = (date: Date | string) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (date: Date | string) => {
-    if (!date) return '';
-    return new Date(date).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
     <Dialog open={!!business} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-background border-border">
-            <div className="relative -m-6 mb-0">
-            <div className="relative h-64 w-full overflow-hidden">
-                <ImageWithFallback
-                src={business.avatar || ''}
-                alt={business.name}
-                className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+        <div className="relative -m-6 mb-0">
+          <div className="relative h-64 w-full overflow-hidden">
+            <ImageWithFallback
+              src={business.avatar || ''}
+              alt={business.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
 
-                <div className="absolute top-4 left-4 flex gap-2 z-20">
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
-                    title="Compartir"
-                >
-                    <Share2 className="h-5 w-5" />
-                </Button>
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
-                    title="Me gusta"
-                >
-                    <Heart className="h-5 w-5" />
-                </Button>
-                </div>
+            <div className="absolute top-4 left-4 flex gap-2 z-20">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+                title="Compartir"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+                title="Me gusta"
+              >
+                <Heart className="h-5 w-5" />
+              </Button>
+            </div>
 
-                {/* Info sobre la imagen */}
-                <div className="absolute bottom-4 left-4 right-4">
-                <DialogTitle className="text-3xl font-bold text-white mb-2">
-                    {business.name}
-                </DialogTitle>
-                <div className="flex items-center gap-3">
-                    <Badge
-                    className={`${
-                        business.active ? 'bg-green-500/90' : 'bg-gray-500/90'
-                    } text-white`}
-                    >
-                    {business.active ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                    <Badge className="bg-primary/90 text-white">
-                    {events.length} eventos
-                    </Badge>
-                </div>
-                </div>
+            <div className="absolute bottom-4 left-4 right-4">
+              <DialogTitle className="text-3xl font-bold text-white mb-2">
+                {business.name}
+              </DialogTitle>
+              <div className="flex items-center gap-3">
+                <Badge
+                  className={`${
+                    business.active ? 'bg-green-500/90' : 'bg-gray-500/90'
+                  } text-white`}
+                >
+                  {business.active ? 'Activo' : 'Inactivo'}
+                </Badge>
+                <Badge className="bg-primary/90 text-white">
+                  {events.length} evento{events.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
-            </div>
+          </div>
+        </div>
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid w-full grid-cols-3 bg-muted">
+          <TabsList className={`grid w-full ${hideMapTab ? 'grid-cols-2' : 'grid-cols-3'} bg-muted`}>
             <TabsTrigger value="info">Información</TabsTrigger>
             <TabsTrigger value="events">
               Eventos ({events.length})
             </TabsTrigger>
-            <TabsTrigger value="map">Mapa</TabsTrigger>
+            {!hideMapTab && (
+              <TabsTrigger value="map">Mapa</TabsTrigger>
+            )}
           </TabsList>
 
           {/* TAB: INFORMACIÓN */}
@@ -251,107 +253,27 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
           </TabsContent>
 
           {/* TAB: EVENTOS */}
-          <TabsContent value="events" className="space-y-4 mt-6">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : events.length > 0 ? (
-              <div className="grid gap-4">
-                {events.map(event => {
-                  const isJoined = isUserJoined(event._id);
-
-                  return (
-                    <Card
-                      key={event._id}
-                      className="overflow-hidden border-2 border-border/50 bg-card/50 hover:border-primary/50 transition-all"
-                    >
-                      <div className="flex flex-col md:flex-row">
-                        {/* Imagen del evento */}
-                        <div className="relative h-48 md:h-auto md:w-48 overflow-hidden">
-                          <ImageWithFallback
-                            src={
-                              'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&w=400&q=80'
-                            }
-                            alt={event.name}
-                            className="w-full h-full object-cover"
-                          />
-                          <Badge className="absolute top-3 left-3 bg-primary/90">
-                            {event.category || 'General'}
-                          </Badge>
-                        </div>
-
-                        {/* Contenido */}
-                        <CardContent className="flex-1 p-5 space-y-4">
-                          <div>
-                            <h3 className="text-xl font-bold text-white mb-2">
-                              {event.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {event.description}
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Calendar className="h-4 w-4 text-secondary" />
-                              <span>{formatDate(event.schedule)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Clock className="h-4 w-4 text-accent" />
-                              <span>{formatTime(event.schedule)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Users className="h-4 w-4 text-chart-5" />
-                              <span>
-                                {event.participants?.length || 0} asistirán
-                              </span>
-                            </div>
-                            {event.price !== undefined && (
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Badge variant="outline">
-                                  {event.price > 0 ? `${event.price}€` : 'Gratis'}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-
-                          <Button
-                            onClick={() => handleJoinToggle(event._id)}
-                            className={`w-full ${
-                              isJoined
-                                ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
-                                : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02]'
-                            } transition-all duration-300`}
-                          >
-                            {isJoined ? '✓ Ya estás apuntado' : 'Apuntarme al evento'}
-                          </Button>
-                        </CardContent>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  No hay eventos programados en este local
-                </p>
-              </div>
-            )}
-          </TabsContent>
+            <TabsContent value="events" className="space-y-4 mt-6">
+              <BusinessEvents
+                events={events}
+                loading={loading}
+                onJoinToggle={handleJoinToggle}
+                isUserJoined={isUserJoined}
+              />
+            </TabsContent>
 
           {/* TAB: MAPA */}
-          <TabsContent value="map" className="mt-6">
-            <div className="h-[500px] rounded-lg overflow-hidden">
-              <BusinessMap
-                businesses={[business]}
-                selectedBusiness={business}
-                isExpanded={false}
-              />
-            </div>
-          </TabsContent>
+          {!hideMapTab && (
+            <TabsContent value="map" className="mt-6">
+              <div className="h-[500px] rounded-lg overflow-hidden">
+                <BusinessMap
+                  businesses={[business]}
+                  selectedBusiness={business}
+                  isExpanded={false}
+                />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
     </Dialog>

@@ -2,14 +2,16 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { IBusiness } from '../../modules/bussiness';
+import { BusinessDetailModal } from './BusinessDetailModal';
+import { Button } from '../../ui/button';
+import { MapPin, Phone } from 'lucide-react';
 
-// Icono por defecto para discotecas sin avatar
-const DEFAULT_BUSINESS_ICON = '/default-disco.png'; // Puedes usar una imagen de disco ball o similar
+const DEFAULT_BUSINESS_ICON = '/default-disco.png';
 
 const createBusinessIcon = (business: IBusiness, isExpanded: boolean = false) => {
-  const size = isExpanded ? 64 : 36; // Cambié de 48 a 64
+  const size = isExpanded ? 64 : 36;
   const avatarUrl = business.avatar || DEFAULT_BUSINESS_ICON;
   
   const iconHtml = `
@@ -92,67 +94,197 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   onSelectBusiness,
   isExpanded = false
 }) => {
-  const heightClass = isExpanded ? 'h-full' : 'h-[400px]';
+  const [modalBusiness, setModalBusiness] = useState<IBusiness | null>(null);
+  const heightClass = isExpanded ? 'h-full' : 'h-full';
 
   return (
-    <div className={`relative w-full ${heightClass} rounded-lg overflow-hidden border border-border`}>
-      <MapContainer
-        center={[40.4168, -3.7038]}
-        zoom={12}
-        scrollWheelZoom
-        className="w-full h-full z-0"
-      >
-        <TileLayer
-          attribution="© OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+    <>
+      <div className={`relative w-full ${heightClass} rounded-lg overflow-hidden border border-border`}>
+        <MapContainer
+          center={[40.4168, -3.7038]}
+          zoom={12}
+          scrollWheelZoom
+          className="w-full h-full z-0"
+        >
+          <TileLayer
+            attribution="© OpenStreetMap contributors"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-        <MapFocus business={selectedBusiness} isExpanded={isExpanded} />
+          <MapFocus business={selectedBusiness} isExpanded={isExpanded} />
 
-        {businesses.map(business => {
-          if (!business.location?.coordinates) return null;
+          {businesses.map(business => {
+            if (!business.location?.coordinates) return null;
+            
+            const [lng, lat] = business.location.coordinates;
+            const isSelected = selectedBusiness?._id === business._id;
+
+            return (
+              <Marker
+                key={business._id}
+                position={[lat, lng]}
+                icon={createBusinessIcon(business, isExpanded && isSelected)}
+                eventHandlers={{
+                  click: () => onSelectBusiness?.(business)
+                }}
+              >
+                <Popup 
+                  maxWidth={360} 
+                  minWidth={300}
+                  className="business-popup"
+                  closeButton={true}
+                  autoPan={true}
+                  autoPanPadding={[80, 80]}
+                  keepInView={true}
+                  maxHeight={500}
+                >
+                    <div className="bg-card rounded-lg overflow-hidden">
+                      {/* Imagen del negocio */}
+                      {business.avatar && (
+                        <div className="relative h-44 w-full overflow-hidden">
+                          <img 
+                            src={business.avatar} 
+                            alt={business.name}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                          />
+                          {/* Badge de estado - posicionado a la izquierda para evitar solapamiento con X */}
+                          {!business.active && (
+                            <div className="absolute top-3 left-3">
+                              <span className="px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-lg">
+                                Inactiva
+                              </span>
+                            </div>
+                          )}
+                          {business.active && (
+                            <div className="absolute top-3 left-3">
+                              <span className="px-3 py-1.5 text-xs font-semibold bg-green-500 text-white rounded-full shadow-lg">
+                                Activa
+                              </span>
+                            </div>
+                          )}
+                          {/* Overlay gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        </div>
+                      )}
+                      
+                      {/* Contenido */}
+                      <div className="p-5 space-y-3">
+                        <h3 className="text-xl font-bold text-foreground leading-tight">
+                          {business.name}
+                        </h3>
+                        
+                        {business.address && (
+                          <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                            <MapPin className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                            <span className="leading-relaxed flex-1">{business.address}</span>
+                          </div>
+                        )}
+                        
+                        {business.phone && (
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <Phone className="h-5 w-5 flex-shrink-0 text-primary" />
+                            <span className="font-medium">{business.phone}</span>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={() => setModalBusiness(business)}
+                          className="w-full mt-4 h-10 text-base font-semibold"
+                          size="default"
+                        >
+                          Ver detalles completos
+                        </Button>
+                      </div>
+                    </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+
+        <style>{`
+          .business-marker-icon {
+            background: transparent !important;
+            border: none !important;
+          }
+
+          /* Popup personalizado */
+          .business-popup .leaflet-popup-content-wrapper {
+            padding: 0 !important;
+            border-radius: 1rem !important;
+            background: hsl(var(--card)) !important;
+            border: 1px solid hsl(var(--border)) !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+            overflow: hidden !important;
+            max-width: 360px !important;
+          }
           
-          const [lng, lat] = business.location.coordinates;
-          const isSelected = selectedBusiness?._id === business._id;
+          .business-popup .leaflet-popup-content {
+            margin: 0 !important;
+            width: 100% !important;
+            min-width: 300px !important;
+          }
 
-          return (
-            <Marker
-              key={business._id}
-              position={[lat, lng]}
-              icon={createBusinessIcon(business, isExpanded && isSelected)}
-              eventHandlers={{
-                click: () => onSelectBusiness?.(business)
-              }}
-            >
-              <Popup>
-                <div className="flex flex-col gap-2 min-w-[200px]">
-                  {business.avatar && (
-                    <img 
-                      src={business.avatar} 
-                      alt={business.name}
-                      className="w-full h-24 object-cover rounded"
-                    />
-                  )}
-                  <strong className="text-base">{business.name}</strong>
-                  {business.address && (
-                    <p className="text-sm text-gray-600">{business.address}</p>
-                  )}
-                  {business.phone && (
-                    <p className="text-sm">📞 {business.phone}</p>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+          .business-popup .leaflet-popup-tip-container {
+            display: none !important;
+          }
 
-      <style>{`
-        .business-marker-icon {
-          background: transparent !important;
-          border: none !important;
-        }
-      `}</style>
-    </div>
+          .business-popup .leaflet-popup-close-button {
+            position: absolute !important;
+            top: 0 !important;
+            right: 0 !important;
+            color: white !important;
+            font-size: 24px !important;
+            font-weight: bold !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            margin: 8px !important;
+            background: rgba(0, 0, 0, 0.6) !important;
+            border-radius: 50% !important;
+            transition: all 0.2s !important;
+            z-index: 1001 !important;
+            line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(4px) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+          }
+
+          .business-popup .leaflet-popup-close-button:hover {
+            background: rgba(0, 0, 0, 0.8) !important;
+            transform: scale(1.1) !important;
+            color: white !important;
+          }
+
+          .business-popup a.leaflet-popup-close-button {
+            text-decoration: none !important;
+          }
+
+          /* Animación de entrada */
+          .business-popup {
+            animation: popupFadeIn 0.3s ease-out;
+          }
+
+          @keyframes popupFadeIn {
+            from {
+              opacity: 0;
+              transform: scale(0.9) translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1) translateY(0);
+            }
+          }
+        `}</style>
+      </div>
+
+      <BusinessDetailModal
+        business={modalBusiness}
+        onClose={() => setModalBusiness(null)}
+        hideMapTab={true} // Oculta el tab de mapa cuando se abre desde el mapa
+      />
+    </>
   );
 };
