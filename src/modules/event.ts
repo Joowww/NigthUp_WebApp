@@ -11,6 +11,7 @@ export interface Event {
   capacity: number;
   price: number;
   participants: string[];
+  city?: string;
 }
 
 

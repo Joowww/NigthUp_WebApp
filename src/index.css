@@ -253,29 +253,9 @@
 
 /* --- ACCESIBILIDAD Y CONCIENCIA DIGITAL --- */
 
-/* Modo Texto Grande */
-body.large-text {
-  font-size: 110%; /* Aumenta todo un 10% */
-}
-
-/* Modo Calma (Desactiva neones fuertes y animaciones) */
-body.reduce-motion *,
-body.reduce-motion *::before,
-body.reduce-motion *::after {
-  animation: none !important;
-  transition: none !important;
-  /* Opcional: Quitar los blurs neón para vista cansada */
-  filter: none !important; 
-  backdrop-filter: none !important;
-}
-
-/* =========================================
-   CONCIENCIA DIGITAL Y ACCESIBILIDAD
-   ========================================= */
-
-/* 1. MODO LECTURA: Aumenta el tamaño base */
+/* 1. MODO LECTURA: Aumenta el tamaño base considerablemente */
 html.large-text {
-  font-size: 120% !important; /* Aumenta un 20% el tamaño base */
+  font-size: 150% !important;
 }
 
 /* 2. MODO CALMA: Desactiva TODO el movimiento */

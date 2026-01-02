@@ -1,7 +1,8 @@
 // src/components/SimpleSidebar.tsx
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Music, Building2, Calendar, Heart, LogOut, ChevronLeft, MessageCircle, LayoutDashboard } from 'lucide-react';
+import { Home, Music, Building2, Calendar, LogOut, ChevronLeft, MessageCircle, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 
@@ -11,19 +12,19 @@ interface SimpleSidebarProps {
 }
 
 export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const menuItems = [
-    { id: '/', label: 'Inicio', icon: Home },
-    { id: '/events', label: 'Eventos', icon: Music },
-    { id: '/venues', label: 'Discotecas', icon: Building2 },
-    { id: '/chat', label: 'Chat', icon: MessageCircle },
-    { id: '/calendar', label: 'Calendario', icon: Calendar },
-    { id: '/favorites', label: 'Favoritos', icon: Heart },
-    ...(user?.role === 'manager' ? [{ id: '/manager', label: 'Panel Manager', icon: LayoutDashboard }] : []),
+    { id: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
+    { id: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
+    { id: '/venues', label: t('sidebar.venues', 'Discotecas'), icon: Building2 }, // Necesita añadir venues a json
+    { id: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
+    { id: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
+    ...(user?.role === 'manager' ? [{ id: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }] : []),
   ];
 
   const handleNavigation = (path: string) => {
@@ -48,10 +49,10 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
+            <h3 className="text-xl font-bold text-white mb-2">{t('common.close_session_confirm', '¿Cerrar sesión?')}</h3>
             <div className="flex gap-3 mt-4">
-              <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-xl">Cancelar</button>
-              <button onClick={handleLogout} className="flex-1 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">Sí, salir</button>
+              <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-xl">{t('common.cancel', 'Cancelar')}</button>
+              <button onClick={handleLogout} className="flex-1 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">{t('common.yes_logout', 'Sí, salir')}</button>
             </div>
           </div>
         </div>
@@ -113,7 +114,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
           </div>
           <button onClick={() => setShowLogoutConfirm(true)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-800/50 hover:text-red-400 hover:bg-red-500/10 transition-all">
             <LogOut className="w-4 h-4" />
-            <span className="text-sm font-medium">Cerrar sesión</span>
+            <span className="text-sm font-medium">{t('sidebar.logout', 'Cerrar sesión')}</span>
           </button>
         </div>
       </aside>

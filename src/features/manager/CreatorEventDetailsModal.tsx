@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Users, DollarSign, Calendar, Clock, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ImageWithFallback } from '../ImageWithFallback';
 import { Badge } from '../../ui/badge';
@@ -22,6 +23,7 @@ interface CreatorEventDetailsModalProps {
 }
 
 export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, onReactivate }: CreatorEventDetailsModalProps) {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 5;
@@ -72,7 +74,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
           {event.disabled && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
               <span className="bg-red-500 text-white px-3 py-1 rounded text-sm font-bold uppercase tracking-wider">
-                Evento Desactivado
+                {t('manager.event_diabled_badge', 'Evento Desactivado')}
               </span>
             </div>
           )}
@@ -86,7 +88,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
             <div className="flex items-center gap-4 text-white/90 text-sm">
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4 text-[#00d9ff]" />
-                <span>{event.venue || 'Ubicación'}</span>
+                <span>{event.venue || t('common.location', 'Ubicación')} {event.city ? `(${event.city})` : ''}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4 text-[#7928ca]" />
@@ -103,7 +105,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
         <div className="p-6">
           <div className="flex justify-end gap-2 mb-4">
             <Button variant="outline" onClick={onEdit} className="border-[#7928ca] text-[#7928ca] hover:bg-[#7928ca]/10">
-              Editar
+              {t('common.edit', 'Editar')}
             </Button>
 
             {event.disabled ? (
@@ -111,11 +113,11 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                 onClick={onReactivate}
                 className="bg-green-600 hover:bg-green-700 text-white border-none shadow-none"
               >
-                Reactivar Evento
+                {t('manager.reactivate_event', 'Reactivar Evento')}
               </Button>
             ) : (
               <Button variant="destructive" onClick={onDisable}>
-                Desactivar
+                {t('common.disable', 'Desactivar')}
               </Button>
             )}
 
@@ -130,7 +132,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                     <Users className="h-5 w-5 text-[#00d9ff]" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Asistentes</p>
+                    <p className="text-sm text-muted-foreground">{t('manager.assistants', 'Asistentes')}</p>
                     <p className="text-foreground">{confirmedCount}</p>
                   </div>
                 </div>
@@ -144,7 +146,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                     <DollarSign className="h-5 w-5 text-[#50fa7b]" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ingresos Est.</p>
+                    <p className="text-sm text-muted-foreground">{t('manager.estimated_earnings', 'Ingresos Est.')}</p>
                     <p className="text-foreground">{estimatedEarnings}€</p>
                   </div>
                 </div>
@@ -152,28 +154,56 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
             </Card>
           </div>
 
-          {/* Detalles adicionales */}
-          <div className="grid md:grid-cols-1 gap-6 mb-6">
+          {/* Detalles adicionales y Mapa */}
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
             <Card className="border-border bg-background">
               <CardContent className="p-4">
-                <h3 className="text-foreground mb-3">Detalles del Evento</h3>
+                <h3 className="text-foreground mb-3">{t('event_details.details_title', 'Detalles del Evento')}</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Precio entrada:</span>
+                    <span className="text-muted-foreground">{t('event_details.entry_price', 'Precio entrada:')}</span>
                     <span className="text-foreground">{event.price}€</span>
                   </div>
                   {event.capacity && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Capacidad máxima:</span>
-                      <span className="text-foreground">{event.capacity} personas</span>
+                      <span className="text-muted-foreground">{t('event_details.max_capacity', 'Capacidad máxima:')}</span>
+                      <span className="text-foreground">{event.capacity} {t('common.people', 'personas')}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ocupación:</span>
+                    <span className="text-muted-foreground">{t('event_details.occupation', 'Ocupación:')}</span>
                     <span className="text-foreground">
                       {event.capacity ? `${Math.round((confirmedCount / Number(event.capacity)) * 100)}%` : 'N/A'}
                     </span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-background">
+              <CardContent className="p-4 h-full flex flex-col">
+                <h3 className="text-foreground mb-3">{t('manager.location_title', 'Ubicación')}</h3>
+                <div className="flex-1 w-full rounded-lg overflow-hidden border border-border min-h-[200px] bg-muted/20 relative">
+                  {(event.venue || event.city) ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                        (event.venue || '') + ' ' + (event.city || '')
+                      )}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    ></iframe>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>{t('manager.no_location', 'No hay ubicación definida')}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -182,7 +212,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
           {/* Lista de participantes paginada */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-foreground">Lista de Participantes</h3>
+              <h3 className="text-foreground">{t('manager.participants_list', 'Lista de Participantes')}</h3>
               <Badge variant="outline" className="border-[#00d9ff]/30 text-[#00d9ff]">
                 {allParticipants.length} total
               </Badge>
@@ -195,9 +225,9 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                   <table className="w-full">
                     <thead className="border-b border-border">
                       <tr className="text-left">
-                        <th className="p-4 text-sm text-muted-foreground">Participante</th>
-                        <th className="p-4 text-sm text-muted-foreground">Edad</th>
-                        <th className="p-4 text-sm text-muted-foreground">Estado</th>
+                        <th className="p-4 text-sm text-muted-foreground">{t('manager.participant_header', 'Participante')}</th>
+                        <th className="p-4 text-sm text-muted-foreground">{t('manager.age_header', 'Edad')}</th>
+                        <th className="p-4 text-sm text-muted-foreground">{t('manager.status_header', 'Estado')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -213,10 +243,10 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                                 alt={participant.name || 'Participante'}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-border"
                               />
-                              <span className="text-foreground">{participant.name || 'Anónimo'}</span>
+                              <span className="text-foreground">{participant.name || t('common.anonymous', 'Anónimo')}</span>
                             </div>
                           </td>
-                          <td className="p-4 text-muted-foreground">{participant.age ? `${participant.age} años` : 'N/A'}</td>
+                          <td className="p-4 text-muted-foreground">{participant.age ? `${participant.age} ${t('common.years', 'años')}` : 'N/A'}</td>
                           <td className="p-4">
                             <Badge
                               className={
@@ -225,7 +255,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                                   : 'bg-[#ffb86c]/20 text-[#ffb86c] border-[#ffb86c]/30'
                               }
                             >
-                              {participant.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
+                              {participant.status === 'confirmed' ? t('manager.confirmed', 'Confirmado') : t('manager.pending', 'Pendiente')}
                             </Badge>
                           </td>
                         </tr>
@@ -237,7 +267,7 @@ export function CreatorEventDetailsModal({ event, onClose, onEdit, onDisable, on
                 {/* Paginación */}
                 <div className="flex items-center justify-between p-4 border-t border-border">
                   <p className="text-sm text-muted-foreground">
-                    Mostrando {startIndex + 1}-{Math.min(endIndex, allParticipants.length)} de {allParticipants.length}
+                    {t('common.showing_range', { start: startIndex + 1, end: Math.min(endIndex, allParticipants.length), total: allParticipants.length })}
                   </p>
 
                   <div className="flex items-center gap-2">

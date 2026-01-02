@@ -19,6 +19,13 @@ export const getEvents = async (skip: number = 0, limit: number = 50): Promise<E
   return res.data;
 };
 
+export const getFypEvents = async (userId: string, skip: number = 0, limit: number = 50): Promise<EventsResponse> => {
+  const res = await api.get(`/user/${userId}/fyp`, {
+    params: { skip, limit }
+  });
+  return res.data;
+};
+
 export const getEventsByManager = async (managerId: string): Promise<any[]> => {
   const res = await api.get(`/event/manager/${managerId}`);
   return res.data;

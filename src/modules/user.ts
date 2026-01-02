@@ -1,15 +1,15 @@
- export interface User {
-  _id: string;
-  username: string;
-  email: string;
-  password: string;
-  birthday: Date;
-  events: string[];
-  role?: string;
-  phoneNumber: string; 
-  securityQuestionKey: string;
-  securityAnswer: string;
-  comunidad: { type: String, default: '' },
-  intereses: [{ type: String }],
-  onboardingCompleted: { type: Boolean, default: false },
- }
+export interface User {
+    _id: string;
+    username: string;
+    email: string;
+    password: string;
+    birthday: Date;
+    events: string[];
+    role?: string;
+    phoneNumber: string;
+    securityQuestionKey: string;
+    securityAnswer: string;
+    comunidad?: string;
+    intereses?: string[];
+    onboardingCompleted?: boolean;
+}

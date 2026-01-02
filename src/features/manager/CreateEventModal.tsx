@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Calendar, Clock, MapPin, DollarSign, Tag, Users, Image as ImageIcon } from 'lucide-react';
+import { cities, getCityCoordinates } from '../../assets/dataCA';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
@@ -13,6 +15,7 @@ interface CreateEventModalProps {
 }
 
 export function CreateEventModal({ onClose, onSave, initialData }: CreateEventModalProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: initialData?.name || initialData?.title || '',
     venue: initialData?.venue || '',
@@ -25,7 +28,10 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
     capacity: initialData?.capacity || '',
     description: initialData?.description || '',
     imageUrl: initialData?.image || '',
+    city: initialData?.city || '',
   });
+
+  const categories = ['Trap', 'Reagge', 'Edgy', 'Tecno', 'Reaggeton', 'House', 'Loofy', 'Funk', 'Pop', 'Indie', 'Rock', 'Metal', 'Trendy', 'Pop con ñ', 'España 2000'];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +55,9 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
       },
       image: formData.imageUrl,
       price: parseFloat(formData.price?.toString().replace('€', '')) || 0,
+
       capacity: parseInt(formData.capacity) || 0,
+      city: formData.city,
     };
 
     // Remove legacy fields if they clash or are synthesized above
@@ -63,6 +71,19 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
   };
 
   const handleChange = (field: string, value: string) => {
+    if (field === 'city') {
+      const coords = getCityCoordinates(value);
+      if (coords) {
+        // coords is [lng, lat] from dataCA
+        setFormData(prev => ({
+          ...prev,
+          [field]: value,
+          longitude: coords[0].toString(),
+          latitude: coords[1].toString()
+        }));
+        return;
+      }
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -84,7 +105,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
         {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="bg-gradient-to-r from-[#ff0080] via-[#7928ca] to-[#00d9ff] bg-clip-text text-transparent">
-            {initialData ? 'Editar Evento' : 'Crear Nuevo Evento'}
+            {initialData ? t('common.edit', 'Editar') : t('manager.create_event_btn', 'Crear Evento')}
           </h2>
           <button
             onClick={onClose}
@@ -99,10 +120,10 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Nombre */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre del Evento *</Label>
+            <Label htmlFor="name">{t('manager.event_name_label', 'Nombre del Evento')} *</Label>
             <Input
               id="name"
-              placeholder="Ej: Noche Electrónica 2024"
+              placeholder={t('manager.event_name_placeholder', 'Ej: Noche Electrónica 2024')}
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               required
@@ -110,16 +131,34 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
             />
           </div>
 
+          {/* City Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="city" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-[#00d9ff]" />
+              {t('dictionary.ciudad', 'Ciudad')} *
+            </Label>
+            <Select value={formData.city} onValueChange={(value) => handleChange('city', value)}>
+              <SelectTrigger className="bg-background border-border">
+                <SelectValue placeholder={t('manager.select_city_placeholder', 'Selecciona una ciudad')} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px]">
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Lugar y Coordenadas */}
           <div className="space-y-4 border-b border-border pb-4">
             <div className="space-y-2">
               <Label htmlFor="venue" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#00d9ff]" />
-                Lugar (Nombre/Dirección) *
+                {t('common.location', 'Lugar')} (Nombre/Dirección) *
               </Label>
               <Input
                 id="venue"
-                placeholder="Ej: Club Paradise"
+                placeholder={t('manager.venue_placeholder', 'Ej: Club Paradise')}
                 value={formData.venue}
                 onChange={(e) => handleChange('venue', e.target.value)}
                 required
@@ -160,7 +199,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
             <div className="space-y-2">
               <Label htmlFor="date" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-[#7928ca]" />
-                Fecha *
+                {t('manager.date_label', 'Fecha')} *
               </Label>
               <Input
                 id="date"
@@ -175,7 +214,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
             <div className="space-y-2">
               <Label htmlFor="time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[#50fa7b]" />
-                Hora *
+                {t('manager.time_label', 'Hora')} *
               </Label>
               <Input
                 id="time"
@@ -192,20 +231,16 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
           <div className="space-y-2">
             <Label htmlFor="category" className="flex items-center gap-2">
               <Tag className="h-4 w-4 text-[#ff0080]" />
-              Categoría *
+              {t('manager.category_label', 'Categoría')} *
             </Label>
             <Select value={formData.category} onValueChange={(value) => handleChange('category', value)}>
               <SelectTrigger className="bg-background border-border">
-                <SelectValue placeholder="Selecciona una categoría" />
+                <SelectValue placeholder={t('manager.select_category_placeholder', 'Selecciona una categoría')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Electrónica">Electrónica</SelectItem>
-                <SelectItem value="Techno">Techno</SelectItem>
-                <SelectItem value="House">House</SelectItem>
-                <SelectItem value="Urbano">Urbano</SelectItem>
-                <SelectItem value="Latino">Latino</SelectItem>
-                <SelectItem value="Rock">Rock</SelectItem>
-                <SelectItem value="Pop">Pop</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{t(`dictionary.${cat}`, cat)}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -215,7 +250,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
             <div className="space-y-2">
               <Label htmlFor="price" className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-[#f1fa8c]" />
-                Precio de Entrada (€)
+                {t('event_details.entry_price', 'Precio de Entrada')} (€)
               </Label>
               <Input
                 id="price"
@@ -231,7 +266,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
             <div className="space-y-2">
               <Label htmlFor="capacity" className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-[#ffb86c]" />
-                Capacidad Máxima
+                {t('event_details.max_capacity', 'Capacidad Máxima')}
               </Label>
               <Input
                 id="capacity"
@@ -246,10 +281,10 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
 
           {/* Descripción */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="description">{t('manager.description_label', 'Descripción')}</Label>
             <Textarea
               id="description"
-              placeholder="Describe tu evento..."
+              placeholder={t('manager.description_placeholder', 'Describe tu evento...')}
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               rows={4}
@@ -284,14 +319,14 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
               onClick={onClose}
               className="flex-1"
             >
-              Cancelar
+              {t('common.cancel', 'Cancelar')}
             </Button>
             <Button
               type="submit"
               disabled={!isValid}
               className={`flex-1 bg-gradient-to-r from-[#ff0080] to-[#7928ca] hover:shadow-lg hover:shadow-[#ff0080]/30 ${!isValid ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {initialData ? 'Guardar Cambios' : 'Crear Evento'}
+              {initialData ? t('manager.save_changes_btn', 'Guardar Cambios') : t('manager.create_event_btn', 'Crear Evento')}
             </Button>
           </div>
         </form>

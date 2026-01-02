@@ -5,57 +5,76 @@ import { Calendar, Users, ChevronRight, MapPin } from 'lucide-react';
 
 interface EventMapProps {
   events: Event[];
+  initialCenter?: [number, number]; // [lat, lng]
 }
 
-export const EventMap: React.FC<EventMapProps> = ({ events }) => {
+export const EventMap: React.FC<EventMapProps> = ({ events, initialCenter }) => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
-  // Función para crear URL de OpenStreetMap con múltiples marcadores
+  // Función para crear URL de OpenStreetMap con marcadores
   const createMapUrl = () => {
-    if (events.length === 0) {
-      return "https://www.openstreetmap.org/export/embed.html?bbox=-3.8889,40.3111,-3.4558,40.6436&layer=mapnik";
-    }
-
-    // Si hay un evento seleccionado, centrar en ese evento
-    if (selectedEvent) {
-      const [lng, lat] = selectedEvent.location.coordinates;
-      const bbox = `${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}`;
-      return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
-    }
-
-    // Si no hay evento seleccionado, mostrar todos los eventos
+    // Marcadores para todos los eventos
     const markers = events.map(event => {
+      if (!event.location || !event.location.coordinates) return '';
       const [lng, lat] = event.location.coordinates;
       return `&marker=${lat},${lng}`;
     }).join('');
 
-    // Calcular bounding box que incluya todos los eventos
-    const lngs = events.map(event => event.location.coordinates[0]);
-    const lats = events.map(event => event.location.coordinates[1]);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    
-    const bbox = `${minLng-0.05},${minLat-0.05},${maxLng+0.05},${maxLat+0.05}`;
-    
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markers}`;
+    // 1. Prioridad: Evento seleccionado por el usuario
+    if (selectedEvent && selectedEvent.location?.coordinates) {
+      const [lng, lat] = selectedEvent.location.coordinates;
+      const bbox = `${lng - 0.01},${lat - 0.01},${lng + 0.01},${lat + 0.01}`;
+      return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+    }
+
+    // 2. Prioridad: Centro inicial (ej. ciudad del usuario)
+    if (initialCenter) {
+      const [lat, lng] = initialCenter;
+      const bbox = `${lng - 0.1},${lat - 0.1},${lng + 0.1},${lat + 0.1}`;
+      return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markers}`;
+    }
+
+    // 3. Prioridad: Bounding box de todos los eventos
+    if (events.length > 0) {
+      const lngs = events.map(event => event.location.coordinates[0]).filter(c => c !== undefined);
+      const lats = events.map(event => event.location.coordinates[1]).filter(c => c !== undefined);
+
+      if (lngs.length > 0) {
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+
+        const bbox = `${minLng - 0.05},${minLat - 0.05},${maxLng + 0.05},${maxLat + 0.05}`;
+        return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markers}`;
+      }
+    }
+
+    // 4. Default: Madrid
+    return "https://www.openstreetmap.org/export/embed.html?bbox=-3.8889,40.3111,-3.4558,40.6436&layer=mapnik";
   };
 
   // Función para crear URL del mapa completo
   const createFullMapUrl = () => {
-    if (events.length === 0) {
-      return "https://www.openstreetmap.org/#map=13/40.4168/-3.7038";
-    }
-
-    if (selectedEvent) {
+    if (selectedEvent && selectedEvent.location?.coordinates) {
       const [lng, lat] = selectedEvent.location.coordinates;
       return `https://www.openstreetmap.org/#map=16/${lat}/${lng}`;
     }
 
-    const firstEvent = events[0];
-    const [lng, lat] = firstEvent.location.coordinates;
-    return `https://www.openstreetmap.org/#map=13/${lat}/${lng}`;
+    if (initialCenter) {
+      const [lat, lng] = initialCenter;
+      return `https://www.openstreetmap.org/#map=13/${lat}/${lng}`;
+    }
+
+    if (events.length > 0) {
+      const firstEvent = events.find(e => e.location?.coordinates);
+      if (firstEvent) {
+        const [lng, lat] = firstEvent.location.coordinates;
+        return `https://www.openstreetmap.org/#map=13/${lat}/${lng}`;
+      }
+    }
+
+    return "https://www.openstreetmap.org/#map=13/40.4168/-3.7038";
   };
 
   // Función para obtener ubicación legible
@@ -63,7 +82,7 @@ export const EventMap: React.FC<EventMapProps> = ({ events }) => {
     if (!event.location || !event.location.coordinates) {
       return 'Ubicación no disponible';
     }
-    
+
     const [lng, lat] = event.location.coordinates;
     return `Lat: ${lat?.toFixed(4)}, Lng: ${lng?.toFixed(4)}`;
   };
@@ -125,11 +144,10 @@ export const EventMap: React.FC<EventMapProps> = ({ events }) => {
             <button
               key={event._id}
               onClick={() => setSelectedEvent(event)}
-              className={`w-full text-left p-3 rounded-lg transition-colors ${
-                selectedEvent?._id === event._id
-                  ? 'bg-primary text-white'
-                  : 'bg-card text-muted-foreground hover:bg-accent hover:text-white'
-              }`}
+              className={`w-full text-left p-3 rounded-lg transition-colors ${selectedEvent?._id === event._id
+                ? 'bg-primary text-white'
+                : 'bg-card text-muted-foreground hover:bg-accent hover:text-white'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium truncate">{event.name}</span>
@@ -146,7 +164,7 @@ export const EventMap: React.FC<EventMapProps> = ({ events }) => {
 
       {/* Enlace al mapa completo */}
       <div className="text-center pt-2">
-        <a 
+        <a
           href={createFullMapUrl()}
           target="_blank"
           rel="noopener noreferrer"

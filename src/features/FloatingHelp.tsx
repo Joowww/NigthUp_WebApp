@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Globe, 
-  X, 
-  Settings, 
-  Type, 
-  ZapOff, 
-  Check 
+import {
+  Globe,
+  X,
+  Settings,
+  Type,
+  ZapOff,
+  Check
 } from 'lucide-react';
+import { useUIPreferences } from '../context/UIPreferencesContext';
 
 export function FloatingHelp() {
   const { i18n, t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  
+
+  const { toggleHighZoom } = useUIPreferences();
+
   // Estados para Conciencia Digital
   const [isLargeText, setIsLargeText] = useState(false);
   const [isLowMotion, setIsLowMotion] = useState(false);
 
   // Efecto: Cuando cambian los interruptores, ponemos/quitamos clases al BODY
-useEffect(() => {
+  useEffect(() => {
     // Modo Lectura (Texto Grande)
     if (isLargeText) {
       document.documentElement.classList.add('large-text');
@@ -41,13 +44,13 @@ useEffect(() => {
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
   ];
 
-return (
+  return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-      
+
       {/* 1. EL TELÓN INVISIBLE (BACKDROP) */}
       {/* Lo ponemos primero. Si está abierto, cubre la pantalla para detectar clics fuera */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-transparent"
           onClick={() => setIsOpen(false)}
         />
@@ -55,14 +58,14 @@ return (
 
       {/* 2. MENÚ DESPLEGABLE */}
       {/* AÑADIDO 'relative z-50' para que flote ENCIMA del telón */}
-      <div 
+      <div
         className={`
           relative z-50 mb-4 w-72 origin-bottom-right rounded-2xl border border-[#ff0080]/30 
           bg-[#0f0f0f]/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-300
           ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}
         `}
         // AÑADIDO: Evita que los clics dentro del menú cierren el menú
-        onClick={(e) => e.stopPropagation()} 
+        onClick={(e) => e.stopPropagation()}
       >
         {/* SECCIÓN 1: IDIOMA */}
         <div className="mb-4">
@@ -96,11 +99,14 @@ return (
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Settings className="w-3 h-3" /> Conciencia Digital
           </h3>
-          
+
           <div className="space-y-2">
             {/* Opción A: Modo Lectura */}
             <button
-              onClick={() => setIsLargeText(!isLargeText)}
+              onClick={() => {
+                setIsLargeText(!isLargeText);
+                toggleHighZoom();
+              }}
               className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5 cursor-pointer"
             >
               <div className="flex items-center gap-3">
@@ -114,7 +120,7 @@ return (
               </div>
               {/* Checkbox visual */}
               <div className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all ${isLargeText ? 'bg-[#ff0080] border-[#ff0080]' : 'border-gray-600'}`}>
-                 {isLargeText && <Check className="w-3 h-3 text-white" />}
+                {isLargeText && <Check className="w-3 h-3 text-white" />}
               </div>
             </button>
 
@@ -134,9 +140,11 @@ return (
               </div>
               {/* Checkbox visual */}
               <div className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all ${isLowMotion ? 'bg-[#ff0080] border-[#ff0080]' : 'border-gray-600'}`}>
-                 {isLowMotion && <Check className="w-3 h-3 text-white" />}
+                {isLowMotion && <Check className="w-3 h-3 text-white" />}
               </div>
             </button>
+
+
           </div>
         </div>
       </div>
@@ -147,8 +155,8 @@ return (
         className={`
           relative z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,0,128,0.3)] 
           transition-all duration-300 border-2 border-white/10
-          ${isOpen 
-            ? 'bg-[#1a1a1a] text-white rotate-45' 
+          ${isOpen
+            ? 'bg-[#1a1a1a] text-white rotate-45'
             : 'bg-gradient-to-r from-[#ff0080] to-[#7928ca] text-white hover:scale-110'
           }
         `}

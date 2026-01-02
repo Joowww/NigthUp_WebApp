@@ -9,6 +9,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ThemeProvider } from 'next-themes';
 import './i18n';
 
+import { UIPreferencesProvider } from './context/UIPreferencesContext';
+
 createRoot(document.getElementById('root')!).render(//busca el elemento con id root en el html
   //el cual es dnd va a inyectar la app/web
   <StrictMode>
@@ -18,15 +20,17 @@ createRoot(document.getElementById('root')!).render(//busca el elemento con id r
       enableSystem
       disableTransitionOnChange
     >
-      <AuthProvider> 
+      <UIPreferencesProvider>
+        <AuthProvider>
 
-      <ToastContainer
-        theme="dark"
-        position="bottom-right"
-        autoClose={3000}
-      />
-        <App />
-      </AuthProvider>
+          <ToastContainer
+            theme="dark"
+            position="bottom-right"
+            autoClose={3000}
+          />
+          <App />
+        </AuthProvider>
+      </UIPreferencesProvider>
     </ThemeProvider>
   </StrictMode>,
 );
