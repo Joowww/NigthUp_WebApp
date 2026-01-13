@@ -80,15 +80,26 @@ export const BusinessPage: React.FC = () => {
 
   return (
     <div className="h-full w-full p-6 space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-3xl font-bold text-white">Discotecas</h1>
+      {/* HEADER CON DEGRADADO */}
+      <div className="space-y-3">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-[#ff0080] via-[#00d9ff] to-[#ff0080] bg-clip-text text-transparent animate-pulse">
+          Discotecas
+        </h1>
         
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="font-medium">
-            {filteredBusinesses.length} de {businesses.length} discotecas
-          </span>
-        </div>
+        <p className="text-muted-foreground text-base max-w-3xl">
+          Explora las mejores discotecas y clubs nocturnos de tu ciudad. Descubre nuevos lugares, 
+          consulta eventos próximos y encuentra tu próximo destino para disfrutar de la mejor música 
+          y ambiente nocturno. 🎉
+        </p>
+
+         {/* ✅ MOSTRAR SOLO CUANDO HAY BÚSQUEDA O FILTROS ACTIVOS */}
+         {(searchQuery || hasActiveFilters) && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium">
+              {filteredBusinesses.length} de {businesses.length} discotecas disponibles
+            </span>
+          </div>
+        )}
       </div>
 
       {/* BUSCADOR Y FILTROS */}
@@ -98,7 +109,7 @@ export const BusinessPage: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="¿A que discoteca quieres ir? ¡Encuentrala por su nombre!"
+            placeholder="¿A qué discoteca quieres ir? ¡Encuéntrala por su nombre!"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10 h-11 bg-card border-border focus:border-primary transition-colors"
@@ -219,7 +230,7 @@ export const BusinessPage: React.FC = () => {
 
       {/* MAPA NORMAL */}
       {activeTab === 'map' && filteredBusinesses.length > 0 && !isMapExpanded && (
-        <div className="h-[calc(100vh-300px)] min-h-[600px]">
+        <div className="h-[calc(100vh-350px)] min-h-[600px]">
           <BusinessMap
             businesses={filteredBusinesses}
             selectedBusiness={selectedBusiness}

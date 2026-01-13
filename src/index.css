@@ -297,3 +297,10 @@ html.reduce-motion .backdrop-blur-xl {
   backdrop-filter: none !important;
   background-color: rgba(15, 15, 15, 0.95); /* Fondo sólido para que se lea bien */
 }
+
+/* 🎨 Estilos de controles de zoom ARREGLADOS */
+.leaflet-bottom.leaflet-left {
+  bottom: 12px !important;
+  left: 12px !important;
+  z-index: 999 !important;
+}

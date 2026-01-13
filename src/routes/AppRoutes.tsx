@@ -11,7 +11,7 @@ import OnboardingFlow from '../features/PreHome';
 import {EventsPage} from '../features/events/EventsPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
-import { BusinessPage } from '../features/business/businessPage';
+import { BusinessPage } from '../features/business/BusinessPage';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();

@@ -1,70 +1,116 @@
 // features/business/BusinessDetailModal.tsx
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { IBusiness } from '../../modules/bussiness';
 import type { Event } from '../../modules/event';
-import { useAuth } from '../../hooks/useAuth';
 import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
-import { BusinessMap } from './BusinessMap';
-import { BusinessEvents } from './BusinessEvents';
-import { ImageWithFallback } from '../ImageWithFallback';
-
+import { useAuth } from '../../hooks/useAuth';
 import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-  } from '../../ui/dialog';
-import { Button } from '../../ui/button';
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '../../ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../ui/tabs';
 import { Badge } from '../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
-import {
-  MapPin,
-  Phone,
-  Mail,
-  ExternalLink,
-  Heart,
-  Share2,
-} from 'lucide-react';
+import { Button } from '../../ui/button';
+import { MapPin, Phone, Users, Mail, ExternalLink, Heart, Share2 } from 'lucide-react';
+import { BusinessEvents } from './BusinessEvents';
+import { BusinessMap } from './BusinessMap';
+import { ImageWithFallback } from '../ImageWithFallback';
 
 interface BusinessDetailModalProps {
   business: IBusiness | null;
   onClose: () => void;
   hideMapTab?: boolean;
+  userLocation?: [number, number];
 }
 
 export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
   business,
   onClose,
-  hideMapTab = false
+  hideMapTab = false,
+  userLocation
 }) => {
   const { user, updateUser } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
 
+  // 🎊 Efecto de confeti
   useEffect(() => {
     if (!business) return;
-  
-    console.log('🏢 Business:', business.name);
-    console.log('📋 Business.events:', business.events);
+
+    console.log('🎉 CREANDO CONFETI ANIMADO');
+
+    const colors = ['#ff0080', '#00d9ff', '#7928ca', '#50fa7b', '#ffb86c', '#bd93f9'];
+    
+    for (let i = 0; i < 50; i++) {
+      setTimeout(() => {
+        const confetti = document.createElement('div');
+        
+        const startX = Math.random() * window.innerWidth;
+        const endX = startX + (Math.random() - 0.5) * 300;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size = Math.random() * 10 + 5;
+        const duration = Math.random() * 1000 + 1500;
+        const rotation = Math.random() * 720 - 360;
+        
+        confetti.style.cssText = `
+          position: fixed;
+          left: ${startX}px;
+          top: -20px;
+          width: ${size}px;
+          height: ${size}px;
+          background: ${color};
+          border-radius: 50%;
+          z-index: 99999;
+          pointer-events: none;
+        `;
+        
+        document.body.appendChild(confetti);
+        
+        confetti.animate([
+          {
+            transform: 'translateY(0) translateX(0) rotate(0deg)',
+            opacity: 1
+          },
+          {
+            transform: `translateY(${window.innerHeight + 50}px) translateX(${endX - startX}px) rotate(${rotation}deg)`,
+            opacity: 0
+          }
+        ], {
+          duration: duration,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          fill: 'forwards'
+        });
+        
+        setTimeout(() => {
+          confetti.remove();
+        }, duration + 500);
+      }, i * 20);
+    }
+  }, [business]);
+
+  useEffect(() => {
+    if (!business) return;
   
     const loadBusinessEvents = async () => {
       setLoading(true);
       try {
         const response = await getEvents(0, 100);
-        console.log('📦 Total eventos disponibles:', response.events.length);
         
-        // Normalizar los IDs de eventos del negocio
         const normalizedBusinessEventIds = (business.events || []).map(e => 
           typeof e === 'object' && e !== null && '_id' in (e as { _id?: string }) ? (e as { _id: string })._id : e
         );
-        
-        console.log('🎯 IDs de eventos del negocio normalizados:', normalizedBusinessEventIds);
         
         const businessEvents = response.events.filter(event =>
           normalizedBusinessEventIds.includes(event._id)
         );
         
-        console.log('✅ Eventos filtrados:', businessEvents.length, businessEvents);
         setEvents(businessEvents);
       } catch (error) {
         console.error('Error loading events:', error);
@@ -94,7 +140,6 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
     const isJoined = isUserJoined(eventId);
 
     try {
-      // Actualizar optimistamente el estado local
       setEvents(current =>
         current.map(ev => {
           if (ev._id === eventId) {
@@ -122,7 +167,6 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
       console.error('Error en join/leave:', error);
       alert('Hubo un error al procesar tu solicitud.');
       
-      // Revertir el cambio optimista en caso de error
       const response = await getEvents(0, 100);
       const businessEvents = response.events.filter(event =>
         business.events?.includes(event._id)
@@ -142,25 +186,6 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-
-            <div className="absolute top-4 left-4 flex gap-2 z-20">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
-                title="Compartir"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
-                title="Me gusta"
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
-            </div>
 
             <div className="absolute bottom-4 left-4 right-4">
               <DialogTitle className="text-3xl font-bold text-white mb-2">
@@ -182,7 +207,6 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
           </div>
         </div>
 
-        {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
           <TabsList className={`grid w-full ${hideMapTab ? 'grid-cols-2' : 'grid-cols-3'} bg-muted`}>
             <TabsTrigger value="info">Información</TabsTrigger>
@@ -194,75 +218,78 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
             )}
           </TabsList>
 
-          {/* TAB: INFORMACIÓN */}
           <TabsContent value="info" className="space-y-6 mt-6">
+            {/* Grid principal de información */}
             <div className="grid gap-4">
               {business.address && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-card border border-border">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-semibold text-white">Dirección</p>
-                    <p className="text-muted-foreground">{business.address}</p>
+                    <p className="font-medium text-sm text-muted-foreground">Dirección</p>
+                    <p className="text-foreground">{business.address}</p>
                   </div>
                 </div>
               )}
 
               {business.phone && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-card border border-border">
-                  <Phone className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <Phone className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-semibold text-white">Teléfono</p>
-                    <a
-                      href={`tel:${business.phone}`}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      {business.phone}
-                    </a>
+                    <p className="font-medium text-sm text-muted-foreground">Teléfono</p>
+                    <p className="text-foreground">{business.phone}</p>
                   </div>
                 </div>
               )}
 
               {business.email && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-card border border-border">
-                  <Mail className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <Mail className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-semibold text-white">Email</p>
-                    <a
-                      href={`mailto:${business.email}`}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      {business.email}
-                    </a>
+                    <p className="font-medium text-sm text-muted-foreground">Email</p>
+                    <p className="text-foreground">{business.email}</p>
                   </div>
                 </div>
               )}
 
-              {business.location && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-card border border-border">
-                  <ExternalLink className="h-5 w-5 text-chart-5 mt-0.5 flex-shrink-0" />
+              {business.managers && business.managers.length > 0 && (
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <Users className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-semibold text-white">Coordenadas</p>
-                    <p className="text-muted-foreground">
-                      {business.location.coordinates[1].toFixed(4)},{' '}
-                      {business.location.coordinates[0].toFixed(4)}
+                    <p className="font-medium text-sm text-muted-foreground">Managers</p>
+                    <p className="text-foreground">
+                      {business.managers.length} manager{business.managers.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Botones de acción */}
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" className="flex-1 gap-2">
+                <Heart className="h-4 w-4" />
+                Guardar
+              </Button>
+              <Button variant="outline" className="flex-1 gap-2">
+                <Share2 className="h-4 w-4" />
+                Compartir
+              </Button>
+              <Button variant="outline" className="flex-1 gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Sitio web
+              </Button>
+            </div>
           </TabsContent>
 
-          {/* TAB: EVENTOS */}
-            <TabsContent value="events" className="space-y-4 mt-6">
-              <BusinessEvents
-                events={events}
-                loading={loading}
-                onJoinToggle={handleJoinToggle}
-                isUserJoined={isUserJoined}
-              />
-            </TabsContent>
+          <TabsContent value="events" className="space-y-4 mt-6">
+            <BusinessEvents
+              events={events}
+              loading={loading}
+              onJoinToggle={handleJoinToggle}
+              isUserJoined={isUserJoined}
+            />
+          </TabsContent>
 
-          {/* TAB: MAPA */}
           {!hideMapTab && (
             <TabsContent value="map" className="mt-6">
               <div className="h-[500px] rounded-lg overflow-hidden">
@@ -270,6 +297,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
                   businesses={[business]}
                   selectedBusiness={business}
                   isExpanded={false}
+                  userLocation={userLocation}
                 />
               </div>
             </TabsContent>

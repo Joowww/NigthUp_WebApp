@@ -1,5 +1,5 @@
-// src/components/ImageWithFallback.tsx
-import React from 'react';
+// src/features/ImageWithFallback.tsx
+import React, { useState } from 'react';
 
 interface ImageWithFallbackProps {
   src: string;
@@ -8,24 +8,66 @@ interface ImageWithFallbackProps {
   fallbackSrc?: string;
 }
 
-export function ImageWithFallback({ 
+export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ 
   src, 
   alt, 
   className, 
-  fallbackSrc = 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWdnYWV0b24lMjBwYXJ0eXxlbnwxfHx8fDE3NjAwNzg2Nzl8MA&ixlib=rb-4.1.0&q=80&w=400'
-}: ImageWithFallbackProps) {
-  const [imgSrc, setImgSrc] = React.useState(src);
+  fallbackSrc = '/images/businesses/default-disco.png'
+}) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  // 🔄 Fallback de emergencia (imagen externa que siempre funciona)
+  const emergencyFallback = 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&q=80';
 
   const handleError = () => {
-    setImgSrc(fallbackSrc);
+    console.warn(`⚠️ Error cargando imagen: ${imgSrc}`);
+    
+    // Primera vez: intenta con el fallback local
+    if (!hasError && !usedFallback) {
+      console.log(`🔄 Intentando fallback local: ${fallbackSrc}`);
+      setImgSrc(fallbackSrc);
+      setUsedFallback(true);
+      setHasError(true);
+    } 
+    // Segunda vez: usa el fallback de emergencia (imagen externa)
+    else if (usedFallback && imgSrc !== emergencyFallback) {
+      console.log(`🆘 Usando fallback de emergencia: ${emergencyFallback}`);
+      setImgSrc(emergencyFallback);
+    }
+    // Tercera vez: ya no hay más opciones
+    else {
+      console.error(`❌ Todos los fallbacks fallaron`);
+    }
+  };
+
+  const handleLoad = () => {
+    if (imgSrc === emergencyFallback) {
+      console.log(`✅ Fallback de emergencia cargado`);
+    } else if (imgSrc === fallbackSrc) {
+      console.log(`✅ Fallback local cargado`);
+    } else {
+      console.log(`✅ Imagen original cargada: ${imgSrc}`);
+    }
   };
 
   return (
     <img
-      src={imgSrc}
+      src={imgSrc || emergencyFallback}
       alt={alt}
       className={className}
       onError={handleError}
+      onLoad={handleLoad}
+      loading="lazy"
     />
   );
+};
+
+// Export alternativo para compatibilidad con imports antiguos
+export function ImageWithFallback_Legacy(props: ImageWithFallbackProps) {
+  return <ImageWithFallback {...props} />;
 }
+
+// Default export para imports sin destructuring
+export default ImageWithFallback;

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { IBusiness } from '../../modules/bussiness';
 import { MapPin } from 'lucide-react';
 import { BusinessDetailModal } from './BusinessDetailModal';
+import { ImageWithFallback } from '../ImageWithFallback'; 
 
 interface BusinessCardProps {
   business: IBusiness;
@@ -45,12 +46,17 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           </button>
         )}
 
-        {business.avatar && (
-          <img
+        {/* ✅ USA ImageWithFallback EN LUGAR DE <img> */}
+        {business.avatar ? (
+          <ImageWithFallback
             src={business.avatar}
             alt={business.name}
             className="w-full h-40 object-cover rounded-md mb-3"
           />
+        ) : (
+          <div className="w-full h-40 bg-muted rounded-md mb-3 flex items-center justify-center">
+            <span className="text-muted-foreground text-sm">Sin imagen</span>
+          </div>
         )}
 
         <h3 className="text-lg font-semibold">{business.name}</h3>
