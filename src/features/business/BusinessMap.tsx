@@ -181,6 +181,8 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
   // 📍 RECIBIR UBICACIÓN DEL PADRE - SIMPLIFICADO
   useEffect(() => {
+
+    
     if (externalUserLocation) {
       console.log('📍 BusinessMap: Usando ubicación del padre:', externalUserLocation);
       setUserLocation(externalUserLocation);

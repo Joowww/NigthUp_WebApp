@@ -5,11 +5,13 @@ import { BusinessCard } from './BusinessCard';
 interface BusinessListProps {
   businesses: IBusiness[];
   onShowBusinessOnMap?: (business: IBusiness) => void;
+  userLocation?: [number, number]; // ← AÑADIR
 }
 
 export const BusinessList: React.FC<BusinessListProps> = ({
   businesses,
-  onShowBusinessOnMap
+  onShowBusinessOnMap,
+  userLocation // ← AÑADIR
 }) => {
   if (businesses.length === 0) {
     return (
@@ -26,6 +28,7 @@ export const BusinessList: React.FC<BusinessListProps> = ({
           key={business._id}
           business={business}
           onShowMap={() => onShowBusinessOnMap?.(business)}
+          userLocation={userLocation}
         />
       ))}
     </div>

@@ -470,12 +470,13 @@ useEffect(() => {
       )}
 
       {/* LISTADO */}
-      {activeTab === 'list' && filteredBusinesses.length > 0 && (
-        <BusinessList
-          businesses={filteredBusinesses}
-          onShowBusinessOnMap={handleShowBusinessOnMap}
-        />
-      )}
+        {activeTab === 'list' && filteredBusinesses.length > 0 && (
+          <BusinessList
+            businesses={filteredBusinesses}
+            onShowBusinessOnMap={handleShowBusinessOnMap}
+            userLocation={userLocation ?? undefined}
+          />
+        )}
 
       {/* MAPA NORMAL */}
         {activeTab === 'map' && filteredBusinesses.length > 0 && !isMapExpanded && (

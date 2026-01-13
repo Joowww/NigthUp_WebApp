@@ -8,11 +8,13 @@ import { ImageWithFallback } from '../ImageWithFallback';
 interface BusinessCardProps {
   business: IBusiness;
   onShowMap?: () => void;
+  userLocation?: [number, number]; // ← AÑADIR
 }
 
 export const BusinessCard: React.FC<BusinessCardProps> = ({
   business,
-  onShowMap
+  onShowMap,
+  userLocation // ← AÑADIR
 }) => {
   const [showDetail, setShowDetail] = useState(false);
 
@@ -26,7 +28,6 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         `}
         onClick={() => setShowDetail(true)}
       >
-        {/* Botón de mapa flotante */}
         {business.location && (
           <button
             onClick={(e) => {
@@ -46,7 +47,6 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           </button>
         )}
 
-        {/* ✅ USA ImageWithFallback EN LUGAR DE <img> */}
         {business.avatar ? (
           <ImageWithFallback
             src={business.avatar}
@@ -77,6 +77,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
       <BusinessDetailModal
         business={showDetail ? business : null}
         onClose={() => setShowDetail(false)}
+        userLocation={userLocation} 
       />
     </>
   );
