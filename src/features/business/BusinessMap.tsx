@@ -176,102 +176,17 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 }) => {
   const [modalBusiness, setModalBusiness] = useState<IBusiness | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(externalUserLocation || null);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const heightClass = isExpanded ? 'h-full' : 'h-full';
 
-  // 📍 OBTENER UBICACIÓN REAL DEL DISPOSITIVO - MEJORADO
+  // 📍 RECIBIR UBICACIÓN DEL PADRE - SIMPLIFICADO
   useEffect(() => {
-    // Si ya viene ubicación del padre, usarla
     if (externalUserLocation) {
-      console.log('📍 Usando ubicación del padre:', externalUserLocation);
+      console.log('📍 BusinessMap: Usando ubicación del padre:', externalUserLocation);
       setUserLocation(externalUserLocation);
-      return;
+    } else {
+      console.log('⏳ BusinessMap: Esperando ubicación del padre...');
     }
-
-    console.log('📍 Solicitando ubicación REAL del dispositivo...');
-    
-    if (!('geolocation' in navigator)) {
-      console.error('❌ Geolocalización no disponible en este navegador');
-      setLocationError('Tu navegador no soporta geolocalización');
-      setUserLocation([40.4168, -3.7038]);
-      return;
-    }
-
-    // Opciones MEJORADAS para obtener ubicación más precisa
-    const geoOptions: PositionOptions = {
-      enableHighAccuracy: true,  // Fuerza uso de GPS
-      timeout: 30000,             // 30 segundos (aumentado)
-      maximumAge: 0               // NO usar caché, siempre obtener ubicación fresca
-    };
-
-    // Primero intentar watchPosition para obtener la mejor ubicación posible
-    let watchId: number | null = null;
-    let hasReceivedLocation = false;
-
-    watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        
-        console.log(`📍 Ubicación recibida: [${latitude}, ${longitude}]`);
-        console.log(`🎯 Precisión: ${accuracy} metros`);
-
-        // Solo actualizar si es la primera vez o si la precisión mejoró significativamente
-        if (!hasReceivedLocation) {
-          hasReceivedLocation = true;
-          setUserLocation([latitude, longitude]);
-          setLocationError(null);
-          
-          // Si la precisión es buena (< 100m), dejar de observar
-          if (accuracy < 100 && watchId !== null) {
-            console.log('✅ Precisión aceptable alcanzada, deteniendo watchPosition');
-            navigator.geolocation.clearWatch(watchId);
-          }
-        }
-      },
-      (error) => {
-        console.error('❌ Error obteniendo ubicación:', error);
-        
-        let errorMsg = 'No se pudo obtener tu ubicación';
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMsg = 'Permiso de ubicación denegado. Por favor, habilita el acceso a la ubicación en la configuración de tu navegador.';
-            console.error('🚫 Usuario denegó el permiso de ubicación');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMsg = 'Ubicación no disponible. Verifica que tienes GPS/Wi-Fi activos.';
-            console.error('📡 Ubicación no disponible');
-            break;
-          case error.TIMEOUT:
-            errorMsg = 'Tiempo de espera agotado. Intenta de nuevo.';
-            console.error('⏱️ Timeout obteniendo ubicación');
-            break;
-        }
-        
-        setLocationError(errorMsg);
-        
-        // Fallback a Madrid solo si no hemos recibido ninguna ubicación
-        if (!hasReceivedLocation) {
-          console.warn('⚠️ Usando ubicación por defecto (Madrid)');
-          setUserLocation([40.4168, -3.7038]);
-        }
-        
-        // Limpiar watchPosition en caso de error
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-      },
-      geoOptions
-    );
-
-    // Cleanup: detener watchPosition cuando el componente se desmonte
-    return () => {
-      if (watchId !== null) {
-        console.log('🧹 Limpiando watchPosition');
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
   }, [externalUserLocation]);
 
   // 🚗 Función CORREGIDA para abrir navegación con ubicación real
@@ -293,15 +208,12 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     let url: string;
     
     if (isIOS) {
-      // Apple Maps con origen y destino explícitos
       url = `maps://maps.apple.com/?saddr=${userLat},${userLng}&daddr=${lat},${lng}&dirflg=d`;
       console.log('🍎 Abriendo Apple Maps');
     } else if (isAndroid) {
-      // Google Maps nativo en Android
       url = `google.navigation:q=${lat},${lng}`;
       console.log('🤖 Abriendo Google Maps (Android)');
     } else {
-      // Google Maps web para desktop
       url = `https://www.google.com/maps/dir/${userLat},${userLng}/${lat},${lng}`;
       console.log('💻 Abriendo Google Maps (Web)');
     }
@@ -311,52 +223,16 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
   // 🔄 Función para recentrar con actualización de ubicación
   const recenterMap = () => {
-    console.log('🔄 Re-obteniendo ubicación actual...');
+    if (!userLocation) return;
     
-    if (!('geolocation' in navigator)) {
-      console.error('❌ Geolocalización no disponible');
-      return;
+    const map = (window as any).__leafletMap;
+    if (map) {
+      console.log('🗺️ Centrando mapa en ubicación guardada');
+      map.flyTo(userLocation, 14, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
     }
-
-    // Obtener ubicación fresca al recentrar
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const newLocation: [number, number] = [latitude, longitude];
-        
-        console.log(`📍 Nueva ubicación obtenida: [${latitude}, ${longitude}]`);
-        setUserLocation(newLocation);
-        
-        const map = (window as any).__leafletMap;
-        if (map) {
-          console.log('🗺️ Centrando mapa en nueva ubicación');
-          map.flyTo(newLocation, 14, {
-            duration: 1.5,
-            easeLinearity: 0.25
-          });
-        }
-      },
-      (error) => {
-        console.error('❌ Error al recentrar:', error);
-        
-        // Si falla, usar la ubicación que ya tenemos
-        if (userLocation) {
-          const map = (window as any).__leafletMap;
-          if (map) {
-            console.log('🗺️ Usando ubicación guardada para recentrar');
-            map.flyTo(userLocation, 14, {
-              duration: 1.5,
-              easeLinearity: 0.25
-            });
-          }
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
   };
 
   const tileUrls = {
@@ -371,23 +247,16 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <div className="text-center space-y-2 px-6">
           <p className="text-foreground font-semibold">
-            {locationError ? '⚠️ Error de ubicación' : '📍 Obteniendo tu ubicación...'}
+            📍 Obteniendo tu ubicación...
           </p>
-          {locationError && (
-            <p className="text-sm text-muted-foreground max-w-md">
-              {locationError}
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Por favor, permite el acceso a tu ubicación
             </p>
-          )}
-          {!locationError && (
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                Por favor, permite el acceso a tu ubicación
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Asegúrate de que GPS/Wi-Fi estén activos para mayor precisión
-              </p>
-            </div>
-          )}
+            <p className="text-xs text-muted-foreground">
+              Asegúrate de que GPS/Wi-Fi estén activos
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -397,86 +266,92 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     <>
       <div className={`relative w-full ${heightClass} rounded-lg overflow-hidden border border-border`}>
         {/* 🎛️ PANEL DE HERRAMIENTAS AGRUPADO A LA IZQUIERDA */}
-        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-            {/* Botón centrar en ubicación */}
-            <Button
-              onClick={recenterMap}
-              variant="default"
-              size="icon"
-              className="bg-card hover:bg-card/90 border border-border shadow-lg"
-              title="Centrar en mi ubicación actual"
-            >
-              <Crosshair className="h-5 w-5 text-primary" />
-            </Button>
+        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 items-start">
+          {/* Botón centrar en ubicación */}
+          <Button
+            onClick={recenterMap}
+            variant="default"
+            size="icon"
+            className="bg-card hover:bg-card/90 border border-border shadow-lg"
+            title="Centrar en mi ubicación actual"
+          >
+            <Crosshair className="h-5 w-5 text-primary" />
+          </Button>
 
-            {/* Dropdown de capas */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="default"
-                  size="icon"
-                  className="bg-card hover:bg-card/90 border border-border shadow-lg"
-                  title="Cambiar capa del mapa"
-                >
-                  <Layers className="h-5 w-5 text-primary" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="right" className="w-48 bg-card border-border ml-2">
-                <DropdownMenuLabel className="text-foreground">Tipo de mapa</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuCheckboxItem
-                  checked={mapStyle === 'streets'}
-                  onCheckedChange={() => setMapStyle('streets')}
-                  className="text-foreground"
-                >
-                  <MapIcon className="h-4 w-4 mr-2 text-primary" />
-                  Calles
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={mapStyle === 'satellite'}
-                  onCheckedChange={() => setMapStyle('satellite')}
-                  className="text-foreground"
-                >
-                  <Layers className="h-4 w-4 mr-2 text-accent" />
-                  Satélite
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Badge informativo - SEPARADO CON MARGEN */}
-            <div className="mt-2">
-              <Badge 
-                variant="outline" 
-                className="bg-card/95 backdrop-blur-sm border-border text-foreground shadow-lg px-3 py-2"
+          {/* Dropdown de capas */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                size="icon"
+                className="bg-card hover:bg-card/90 border border-border shadow-lg"
+                title="Cambiar capa del mapa"
               >
-                {businesses.length} resultado{businesses.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
-
-                    <MapContainer
-              center={userLocation}
-              zoom={13}
-              scrollWheelZoom={true}
-              zoomControl={false}
-              className="w-full h-full z-0"
-              ref={(mapInstance) => {
-                if (mapInstance) {
-                  (window as any).__leafletMap = mapInstance;
-                  console.log('🗺️ Mapa creado y referencia guardada');
-                }
-              }}
+                <Layers className="h-5 w-5 text-primary" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="start" 
+              side="right" 
+              sideOffset={8}
+              className="w-48 bg-card border-border z-[1001]"
             >
-              <TileLayer
-                attribution="© OpenStreetMap contributors"
-                url={tileUrls[mapStyle]}
-              />
+              <DropdownMenuLabel className="text-foreground">Tipo de mapa</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuCheckboxItem
+                checked={mapStyle === 'streets'}
+                onCheckedChange={() => setMapStyle('streets')}
+                className="text-foreground"
+              >
+                <MapIcon className="h-4 w-4 mr-2 text-primary" />
+                Calles
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={mapStyle === 'satellite'}
+                onCheckedChange={() => setMapStyle('satellite')}
+                className="text-foreground"
+              >
+                <Layers className="h-4 w-4 mr-2 text-accent" />
+                Satélite
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-              <ZoomControl 
-                position="bottomleft"
-                zoomInTitle="Ampliar"
-                zoomOutTitle="Alejar"
-              />
+          {/* Espaciador */}
+          <div className="h-2"></div>
+
+          {/* Badge informativo */}
+          <Badge 
+            variant="outline" 
+            className="bg-card/95 backdrop-blur-sm border-border text-foreground shadow-lg px-3 py-2 whitespace-nowrap z-[999]"
+          >
+            {businesses.length} resultado{businesses.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+
+        <MapContainer
+          center={userLocation}
+          zoom={13}
+          scrollWheelZoom={true}
+          zoomControl={false}
+          className="w-full h-full z-0"
+          ref={(mapInstance) => {
+            if (mapInstance) {
+              (window as any).__leafletMap = mapInstance;
+              console.log('🗺️ Mapa creado y referencia guardada');
+            }
+          }}
+        >
+          <TileLayer
+            attribution="© OpenStreetMap contributors"
+            url={tileUrls[mapStyle]}
+          />
+
+          <ZoomControl 
+            position="bottomleft"
+            zoomInTitle="Ampliar"
+            zoomOutTitle="Alejar"
+          />
 
           <AutoCenter userLocation={userLocation} />
           <MapFocus business={selectedBusiness} isExpanded={isExpanded} />
@@ -557,9 +432,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                           />
                           
-                          {/* 🏷️ BADGES REUBICADOS EN LA PARTE SUPERIOR */}
                           <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
-                            {/* Badge activo/inactivo */}
                             <Badge 
                               className={business.active 
                                 ? "bg-green-500 hover:bg-green-600 shadow-lg" 
@@ -569,7 +442,6 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
                               {business.active ? 'Activa' : 'Inactiva'}
                             </Badge>
                             
-                            {/* Badge de distancia */}
                             <Badge className="bg-primary/90 backdrop-blur-sm shadow-lg">
                               <Navigation className="h-3.5 w-3.5 mr-1" />
                               {formatDistance(distance)}
@@ -655,10 +527,9 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
             }
           }
 
-          /* 🎨 Estilos de controles de zoom ARREGLADOS */
-          .leaflet-bottom.leaflet-right {
+          .leaflet-bottom.leaflet-left {
             bottom: 12px !important;
-            right: 12px !important;
+            left: 12px !important;
             z-index: 999 !important;
           }
 
