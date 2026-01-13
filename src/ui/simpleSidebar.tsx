@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Music, Building2, Calendar, LogOut, ChevronLeft, MessageCircle, LayoutDashboard } from 'lucide-react';
+import { Home, Music, Building2, Calendar, LogOut, ChevronLeft, MessageCircle, LayoutDashboard, Heart } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 
@@ -21,9 +21,10 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const menuItems = [
     { id: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
     { id: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
-    { id: '/venues', label: t('sidebar.venues', 'Discotecas'), icon: Building2 }, // Necesita añadir venues a json
+    { id: '/business', label: t('sidebar.venues', 'Discotecas'), icon: Building2 }, // Necesita añadir venues a json
     { id: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
     { id: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
+    { id: '/favorites', label: 'Favoritos', icon: Heart },
     ...(user?.role === 'manager' ? [{ id: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }] : []),
   ];
 

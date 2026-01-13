@@ -13,6 +13,7 @@ import { EventsPage } from '../features/events/EventsPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { CreatorPage } from '../features/manager/CreatorPage';
+import { BusinessPage } from '../features/business/BusinessPage';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -43,11 +44,11 @@ export const AppRoutes: React.FC = () => {
               <Route path="events" element={<EventsPage />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="chat" element={<ChatPage />} />
-
-              {/* Rutas de Manager */}
+              <Route path="business" element={<BusinessPage />} />
               <Route element={<ManagerRoute />}>
                 <Route path="manager" element={<CreatorPage />} />
               </Route>
+            
             </>
           )}
         </Route>
