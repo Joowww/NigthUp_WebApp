@@ -20,10 +20,9 @@ i18n
     },
     fallbackLng: 'es',
     interpolation: { escapeValue: false },
-    
-    // --- ESTO ES CRÍTICO PARA QUE NO SALGA PANTALLA NEGRA ---
-    react: { 
-      useSuspense: false 
+
+    react: {
+      useSuspense: false
     }
   });
 
