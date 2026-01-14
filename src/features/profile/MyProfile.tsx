@@ -1,0 +1,633 @@
+import { useState, useEffect } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
+import { Badge } from '../../ui/badge';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Edit, Save, X, Upload, MapPin, Calendar, Mail, Phone, User, Heart, Music, Clock, Users, Loader2 } from 'lucide-react';
+import { userService } from './ProfileService';
+import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
+import { EventDetailsModal } from '../events/EventDetailsModal';
+import { ImageWithFallback } from '../ImageWithFallback';
+import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import type { User as UserType } from '../../modules/user';
+import type { Event } from '../../modules/event';
+
+export function MyProfile() {
+  const { t } = useTranslation();
+  const { user: authUser, updateUser } = useAuth();
+  
+  const [profile, setProfile] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<Partial<UserType>>({});
+  
+  // Estados para eventos
+  const [userEvents, setUserEvents] = useState<Event[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ✅ Función para recargar el perfil
+  const refreshProfile = async () => {
+    try {
+      setIsRefreshing(true); 
+      setLoadingEvents(true);
+      const data = await userService.getMyProfile();
+      console.log('Profile refreshed:', data);
+      setProfile(data);
+      setFormData(data);
+  
+      // Recargar eventos del usuario
+      if (data.events && data.events.length > 0) {
+        const allEventsResponse = await getEvents(0, 100);
+        const allEvents = allEventsResponse.events || [];
+        
+        const userEventIds = data.events.map((e: any) => 
+          typeof e === 'string' ? e : e._id
+        );
+        const filteredUserEvents = allEvents.filter(event => 
+          userEventIds.includes(event._id)
+        );
+        
+        setUserEvents(filteredUserEvents);
+      } else {
+        setUserEvents([]);
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setLoadingEvents(false);
+      setIsRefreshing(false);
+    }
+  };
+  
+  const handleSave = async () => {
+    try {
+      setIsRefreshing(true);
+      
+      console.log('📤 Enviando actualización con:', formData);
+      
+      // Solo enviar los campos que han cambiado
+      const changedFields: any = {};
+      if (formData.username !== profile?.username && formData.username) {
+        changedFields.username = formData.username;
+      }
+      if (formData.email !== profile?.email && formData.email) {
+        changedFields.email = formData.email;
+      }
+      if (formData.phoneNumber !== profile?.phoneNumber) {
+        changedFields.phoneNumber = formData.phoneNumber;
+      }
+      if (formData.comunidad !== profile?.comunidad) {
+        changedFields.comunidad = formData.comunidad;
+      }
+      
+      console.log('📝 Campos modificados:', changedFields);
+      
+      if (Object.keys(changedFields).length === 0) {
+        alert('No hay cambios para guardar');
+        setIsEditing(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      const updatedUser = await userService.updateMyProfile(changedFields);
+      console.log('✅ Usuario actualizado:', updatedUser);
+      
+      // Actualizar el estado local
+      setProfile(updatedUser);
+      setFormData(updatedUser);
+      
+      // Actualizar el contexto de auth
+      if (authUser) {
+        updateUser({ ...authUser, ...updatedUser });
+      }
+      
+      setIsEditing(false);
+      alert('✅ Perfil actualizado correctamente');
+    } catch (error: any) {
+      console.error('❌ Error al actualizar:', error);
+      const errorMessage = error.response?.data?.message || 'Error al actualizar el perfil';
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  // ✅ Actualizar handleJoinToggle - Optimizar refresh
+  const handleJoinToggle = async (eventId: string) => {
+    if (!authUser) {
+      alert(t('home.login_required_join', "Necesitas iniciar sesión"));
+      return;
+    }
+
+    const isJoined = isUserJoined(eventId);
+    const prevUserEvents = authUser.events ? [...authUser.events] : [];
+
+    try {
+      setIsRefreshing(true);
+      
+      if (isJoined) {
+        const newUserEvents = prevUserEvents.filter((e: any) => 
+          (typeof e === 'string' ? e : e._id) !== eventId
+        );
+        updateUser({ ...authUser, events: newUserEvents });
+        await leaveEvent(eventId, authUser._id);
+        
+        setUserEvents(current => current.filter(ev => ev._id !== eventId));
+        
+        if (profile) {
+          setProfile({ ...profile, events: newUserEvents });
+        }
+      } else {
+        const newUserEvents = [...prevUserEvents, eventId];
+        updateUser({ ...authUser, events: newUserEvents });
+        await joinEvent(eventId, authUser._id);
+        
+        if (profile) {
+          setProfile({ ...profile, events: newUserEvents });
+        }
+        
+        const allEventsResponse = await getEvents(0, 100);
+        const allEvents = allEventsResponse.events || [];
+        const filteredUserEvents = allEvents.filter(event => 
+          newUserEvents.includes(event._id)
+        );
+        setUserEvents(filteredUserEvents);
+      }
+    } catch (error) {
+      console.error("Error en join/leave:", error);
+      updateUser({ ...authUser, events: prevUserEvents });
+      alert(t('home.error_joining', "Hubo un error al procesar tu solicitud."));
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await userService.getMyProfile();
+        console.log('Profile data:', data);
+        setProfile(data);
+        setFormData(data);
+
+        if (data.events && data.events.length > 0) {
+          setLoadingEvents(true);
+          try {
+            const allEventsResponse = await getEvents(0, 100);
+            const allEvents = allEventsResponse.events || [];
+            
+            const userEventIds = data.events.map((e: any) => 
+              typeof e === 'string' ? e : e._id
+            );
+            const filteredUserEvents = allEvents.filter(event => 
+              userEventIds.includes(event._id)
+            );
+            
+            setUserEvents(filteredUserEvents);
+          } catch (error) {
+            console.error('Error loading user events:', error);
+          } finally {
+            setLoadingEvents(false);
+          }
+        } else {
+          setLoadingEvents(false);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const isUserJoined = (eventId: string): boolean => {
+    return profile?.events?.some((e: any) => (typeof e === 'string' ? e : e._id) === eventId) || false;
+  };
+
+  const formatDate = (date: Date | string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  };
+
+  const formatTime = (date: Date | string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev: Partial<UserType>) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCancel = () => {
+    setFormData(profile || {});
+    setIsEditing(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-center text-muted-foreground mt-4">Cargando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-center text-destructive">Error al cargar el perfil.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pb-12 relative">
+      {/* ✅ NUEVO INDICADOR DE RECARGA - Estilo consistente con BusinessMap */}
+      {isRefreshing && (
+        <div className="fixed top-20 right-4 z-[1000]">
+          <div className="bg-card/95 backdrop-blur-md border border-border shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2">
+            <Loader2 className="h-5 w-5 animate-spin text-accent" />
+            <span className="text-sm font-medium text-foreground">Actualizando perfil...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fondo con degradado extendido hasta mitad de página */}
+      <div className="absolute inset-0 h-[60vh] overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-secondary to-accent animate-gradient-xy"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background"></div>
+        
+        <div className="absolute top-10 left-10 w-32 h-32 bg-primary/50 rounded-full blur-3xl opacity-40 animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-secondary/50 rounded-full blur-3xl opacity-40 animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-20 right-20 w-24 h-24 bg-accent/50 rounded-full blur-2xl opacity-30 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+      </div>
+
+      {/* Contenido */}
+      <div className="relative z-10">
+        <div className="max-w-5xl mx-auto px-6 pt-8 pb-4">
+          <div className="flex justify-end">
+            <Button
+              variant={isEditing ? "destructive" : "secondary"}
+              onClick={isEditing ? handleCancel : () => setIsEditing(true)}
+              className="gap-2 backdrop-blur-md bg-black/30 hover:bg-black/50 border border-white/20 transition-all duration-300"
+            >
+              {isEditing ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Cancelar
+                </>
+              ) : (
+                <>
+                  <Edit className="w-4 h-4" />
+                  Editar Perfil
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-6 mt-16">
+          <Card className="backdrop-blur-xl bg-card/80 border border-border/50 shadow-2xl">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary via-secondary to-accent rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                  <Avatar className="relative w-32 h-32 md:w-40 md:h-40 border-4 border-card">
+                    <AvatarImage
+                      src={profile.avatar || '/default-avatar.png'}
+                      alt={profile.username || 'Usuario'}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-4xl bg-gradient-to-br from-primary to-secondary text-white">
+                      {profile.username?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEditing && (
+                    <button className="absolute bottom-2 right-2 p-2 bg-primary rounded-full hover:scale-110 transition-transform">
+                      <Upload className="w-4 h-4 text-white" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 text-center md:text-left">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                    {profile.username}
+                  </h1>
+                  <div className="flex flex-wrap gap-3 mt-3 justify-center md:justify-start">
+                    <Badge variant="secondary" className="gap-1">
+                      <Mail className="w-3 h-3" />
+                      {profile.email}
+                    </Badge>
+                    {profile.phoneNumber && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Phone className="w-3 h-3" />
+                        {profile.phoneNumber}
+                      </Badge>
+                    )}
+                    {profile.comunidad && (
+                      <Badge variant="secondary" className="gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {profile.comunidad}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-6 mt-4 md:mt-0">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-primary">{profile.events?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground">Eventos</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-secondary">{profile.intereses?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground">Intereses</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Tabs defaultValue="info" className="mt-8">
+            <TabsList className="grid w-full grid-cols-3 bg-card/50 backdrop-blur-xl border border-border/30">
+              <TabsTrigger value="info" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white transition-all">
+                <User className="w-4 h-4 mr-2" />
+                Información
+              </TabsTrigger>
+              <TabsTrigger value="interests" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-secondary data-[state=active]:to-secondary/80 data-[state=active]:text-white transition-all">
+                <Heart className="w-4 h-4 mr-2" />
+                Intereses
+              </TabsTrigger>
+              <TabsTrigger value="events" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent data-[state=active]:to-accent/80 data-[state=active]:text-white transition-all">
+                <Music className="w-4 h-4 mr-2" />
+                Eventos
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="info" className="mt-6 space-y-4">
+              <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-primary/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/20 rounded-lg">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    Información Personal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Nombre de usuario
+                      </label>
+                      <Input
+                        name="username"
+                        value={isEditing ? formData.username : profile.username}
+                        disabled={!isEditing}
+                        onChange={handleInputChange}
+                        className="transition-all duration-300 focus:ring-2 focus:ring-primary bg-background/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Email
+                      </label>
+                      <Input
+                        name="email"
+                        type="email"
+                        value={isEditing ? formData.email : profile.email}
+                        disabled={!isEditing}
+                        onChange={handleInputChange}
+                        className="transition-all duration-300 focus:ring-2 focus:ring-primary bg-background/50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Teléfono
+                      </label>
+                      <Input
+                        name="phoneNumber"
+                        value={isEditing ? formData.phoneNumber : profile.phoneNumber}
+                        disabled={!isEditing}
+                        onChange={handleInputChange}
+                        className="transition-all duration-300 focus:ring-2 focus:ring-primary bg-background/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Fecha de nacimiento
+                      </label>
+                      <Input
+                        value={new Date(profile.birthday).toLocaleDateString()}
+                        disabled
+                        className="bg-muted/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Comunidad
+                    </label>
+                    <Input
+                      name="comunidad"
+                      value={isEditing ? formData.comunidad : profile.comunidad || 'No especificada'}
+                      disabled={!isEditing}
+                      onChange={handleInputChange}
+                      className="transition-all duration-300 focus:ring-2 focus:ring-primary bg-background/50"
+                    />
+                  </div>
+
+                  {isEditing && (
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
+                      <Button onClick={handleCancel} variant="outline" className="gap-2">
+                        <X className="w-4 h-4" />
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSave} className="gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                        <Save className="w-4 h-4" />
+                        Guardar Cambios
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="interests" className="mt-6">
+              <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-secondary/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="p-2 bg-secondary/20 rounded-lg">
+                      <Heart className="w-5 h-5 text-secondary" />
+                    </div>
+                    Mis Intereses
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.intereses && profile.intereses.length > 0 ? (
+                      profile.intereses.map((interest, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-sm bg-gradient-to-r from-secondary/20 to-accent/20 hover:from-secondary/30 hover:to-accent/30 transition-all duration-300 cursor-pointer border border-secondary/30"
+                        >
+                          {typeof interest === 'string' ? interest : interest}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No tienes intereses añadidos</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="events" className="mt-6">
+              <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-accent/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="p-2 bg-accent/20 rounded-lg">
+                      <Music className="w-5 h-5 text-accent" />
+                    </div>
+                    Mis Eventos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingEvents ? (
+                    <div className="flex justify-center py-20">
+                      <Loader2 className="h-10 w-10 animate-spin text-accent" />
+                    </div>
+                  ) : userEvents.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {userEvents.map((event) => {
+                        const isJoined = isUserJoined(event._id);
+
+                        return (
+                          <Card
+                            key={event._id}
+                            onClick={() => setSelectedEvent(event)}
+                            className="group relative overflow-hidden rounded-2xl border-0 bg-[#0f0f0f] shadow-lg transition-all hover:-translate-y-2 hover:shadow-2xl hover:shadow-accent/30 cursor-pointer"
+                          >
+                            <div className="relative h-48 w-full overflow-hidden">
+                              <ImageWithFallback
+                                src={event.imageUrl || 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&w=800&q=80'}
+                                alt={event.name}
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+
+                              <Badge className="absolute left-3 top-3 bg-accent/90 text-white border-none">
+                                {event.category || 'General'}
+                              </Badge>
+
+                              <Badge className="absolute right-12 top-3 bg-primary/90 text-white border-none font-bold">
+                                {event.price > 0 ? `${event.price}€` : 'Gratis'}
+                              </Badge>
+
+                              <div className="absolute right-3 top-3 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm">
+                                <Heart className="h-4 w-4 fill-primary text-primary" />
+                              </div>
+                            </div>
+
+                            <CardContent className="p-5 space-y-4">
+                              <div>
+                                <h3 className="text-xl font-bold text-white line-clamp-1">{event.name}</h3>
+                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                  <MapPin className="h-4 w-4 text-accent" />
+                                  <span className="truncate">
+                                    {event.city || (event.location ? 'Ver Ubicación' : 'Ubicación secreta')}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-400">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-secondary" />
+                                  <span>{formatDate(event.schedule)}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-accent" />
+                                  <span>{formatTime(event.schedule)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 col-span-2">
+                                  <Users className="h-4 w-4 text-primary" />
+                                  <span>{event.participants ? event.participants.length : 0} asistirán</span>
+                                </div>
+                              </div>
+
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJoinToggle(event._id);
+                                }}
+                                className={`w-full h-11 font-semibold transition-all duration-300 ${
+                                  isJoined
+                                    ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
+                                    : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,0,128,0.4)]'
+                                }`}
+                              >
+                                {isJoined ? 'Ya estás apuntado' : 'Apuntarme'}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="rounded-full bg-accent/10 p-4 mb-4">
+                        <Music className="h-10 w-10 text-accent/50" />
+                      </div>
+                      <h3 className="text-lg font-medium text-white">No tienes eventos</h3>
+                      <p className="text-muted-foreground text-sm mt-2 max-w-sm">
+                        Explora los eventos disponibles y apúntate a tus favoritos para verlos aquí.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="mt-4 gap-2 border-accent/30 hover:bg-accent/10"
+                        onClick={() => {
+                          window.location.href = '/events';
+                        }}
+                      >
+                        <Music className="w-4 h-4" />
+                        Explorar eventos
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {selectedEvent && (
+        <EventDetailsModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onJoinToggle={handleJoinToggle}
+          isJoined={isUserJoined(selectedEvent._id)}
+        />
+      )}
+    </div>
+  );
+}

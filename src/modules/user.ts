@@ -12,4 +12,5 @@ export interface User {
     comunidad?: string;
     intereses?: string[];
     onboardingCompleted?: boolean;
+    avatar?: string; 
 }

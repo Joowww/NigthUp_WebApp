@@ -14,6 +14,7 @@ import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { CreatorPage } from '../features/manager/CreatorPage';
 import { BusinessPage } from '../features/business/BusinessPage';
+import { MyProfile } from '../features/profile/MyProfile';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -45,6 +46,7 @@ export const AppRoutes: React.FC = () => {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="business" element={<BusinessPage />} />
+              <Route path="profile" element={<MyProfile />} /> 
               <Route element={<ManagerRoute />}>
                 <Route path="manager" element={<CreatorPage />} />
               </Route>

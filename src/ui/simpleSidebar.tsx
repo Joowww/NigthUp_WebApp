@@ -103,9 +103,12 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
           </ul>
         </nav>
 
-        {/* Footer Usuario */}
+       {/* Footer Usuario */}
         <div className="p-4 border-t border-border/50 bg-black/20">
-          <div className="flex items-center gap-3 mb-4">
+          <div
+            className="flex items-center gap-3 mb-4 cursor-pointer"
+            onClick={() => handleNavigation('/profile')} // Redirige al perfil del usuario
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shrink-0">
               <span className="text-white font-bold text-sm">{user?.username?.substring(0, 2).toUpperCase() || 'US'}</span>
             </div>

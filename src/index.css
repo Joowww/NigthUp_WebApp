@@ -284,3 +284,17 @@ html.reduce-motion .backdrop-blur-xl {
   left: 12px !important;
   z-index: 999 !important;
 }
+
+@keyframes gradient-xy {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-xy {
+  background-size: 400% 400%;
+  animation: gradient-xy 15s ease infinite;
+}
