@@ -13,4 +13,18 @@ export interface User {
     intereses?: string[];
     onboardingCompleted?: boolean;
     avatar?: string; 
+    coverPhoto?: string;
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+    city?: string;
+    country?: string;
+    website?: string;
+    socialMedia?: {
+      instagram?: string;
+      twitter?: string;
+      facebook?: string;
+      tiktok?: string;
+    };
 }

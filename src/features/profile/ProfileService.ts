@@ -1,7 +1,6 @@
 import api from '../../api';
 
 export const userService = {
-  // ✅ Obtener perfil del usuario autenticado
   getMyProfile: async () => {
     try {
       const response = await api.get('/user/me');
@@ -12,7 +11,6 @@ export const userService = {
     }
   },
 
-  // ✅ Obtener eventos del usuario por IDs
   getMyEvents: async (eventIds: string[]) => {
     try {
       if (!eventIds || eventIds.length === 0) {
@@ -28,18 +26,61 @@ export const userService = {
     }
   },
 
-  // ✅ ACTUALIZAR - Extraer el usuario de la respuesta del backend
   updateMyProfile: async (data: any) => {
     try {
       const response = await api.patch('/user/me', data);
-      // El backend devuelve { message: '...', user: {...} }
-      // Extraemos solo el usuario
       if (response.data.user) {
         return response.data.user;
       }
-      return response.data; // Fallback por si acaso
+      return response.data;
     } catch (error) {
       console.error('Error updating my profile:', error);
+      throw error;
+    }
+  },
+
+  // ✅ CORREGIDO - Manejar correctamente la respuesta del avatar
+  updateAvatar: async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const response = await api.post('/user/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      console.log('Avatar response:', response.data);
+      
+      // El backend puede devolver { user: {...} } o directamente el usuario
+      if (response.data.user) {
+        return response.data.user;
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      throw error;
+    }
+  },
+
+  // ✅ CORREGIDO - Manejar correctamente la respuesta del cover
+  updateCoverPhoto: async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('coverPhoto', file);
+      
+      const response = await api.post('/user/cover-photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      console.log('Cover photo response:', response.data);
+      
+      // El backend puede devolver { user: {...} } o directamente el usuario
+      if (response.data.user) {
+        return response.data.user;
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error updating cover photo:', error);
       throw error;
     }
   },
@@ -47,7 +88,6 @@ export const userService = {
   updateUserProfile: async (data: any) => {
     try {
       const response = await api.put('/user/profile', data);
-      // Mismo manejo que updateMyProfile
       if (response.data.user) {
         return response.data.user;
       }
@@ -64,40 +104,6 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      throw error;
-    }
-  },
-
-  updateAvatar: async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      const response = await api.post('/user/avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (response.data.user) {
-        return response.data.user;
-      }
-      return response.data;
-    } catch (error) {
-      console.error('Error updating avatar:', error);
-      throw error;
-    }
-  },
-
-  updateCoverPhoto: async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('coverPhoto', file);
-      const response = await api.post('/user/cover-photo', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (response.data.user) {
-        return response.data.user;
-      }
-      return response.data;
-    } catch (error) {
-      console.error('Error updating cover photo:', error);
       throw error;
     }
   },
