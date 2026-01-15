@@ -5,7 +5,10 @@ import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Edit, Save, X, Upload, MapPin, Calendar, Mail, Phone, User, Heart, Music, Clock, Users, Loader2, Plus } from 'lucide-react';
+import { Edit, Save, X, Upload, MapPin, Calendar, Mail, Phone, User, Heart, Music, Clock, Users, Loader2, Plus, Lock, Shield } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
+import { ChangeEmailModal } from './ChangeEmailModal';
+import { SecurityQuestionModal } from './securityQuestionModal';
 import { userService } from './ProfileService';
 import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
 import { EventDetailsModal } from '../events/EventDetailsModal';
@@ -15,8 +18,8 @@ import { useTranslation } from 'react-i18next';
 import type { User as UserType } from '../../modules/user';
 import type { Event } from '../../modules/event';
 import { ImageUploadModal } from './ImageUploadModal';
-import { useToast } from '../../hooks/useToast'; 
-import { Toast } from '../../ui/toast'; 
+import { useToast } from '../../hooks/useToast';
+import { Toast } from '../../ui/toast';
 
 export function MyProfile() {
   const { t } = useTranslation();
@@ -35,6 +38,11 @@ export function MyProfile() {
 
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showCoverModal, setShowCoverModal] = useState(false);
+
+  // ✅ NUEVOS ESTADOS - Modales de seguridad
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showSecurityQuestionModal, setShowSecurityQuestionModal] = useState(false);
 
   // ✅ FUNCIÓN MEJORADA PARA AVATAR
 const handleAvatarUpload = async (file: File) => {
@@ -170,6 +178,45 @@ const handleAvatarUpload = async (file: File) => {
     setIsEditing(false);
   };
   
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setIsRefreshing(true);
+      await userService.changePassword(currentPassword, newPassword);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  const handleChangeEmail = async (newEmail: string, password: string) => {
+    try {
+      setIsRefreshing(true);
+      const updatedUser = await userService.changeEmail(newEmail, password);
+      
+      setProfile(updatedUser);
+      
+      if (authUser) {
+        updateUser({ ...authUser, ...updatedUser });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  const handleSetSecurityQuestion = async (questionKey: string, answer: string, currentPassword: string) => {
+    try {
+      setIsRefreshing(true);
+      const updatedUser = await userService.setSecurityQuestion(questionKey, answer);
+      
+      setProfile(updatedUser);
+      
+      if (authUser) {
+        updateUser({ ...authUser, ...updatedUser });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleJoinToggle = async (eventId: string) => {
     if (!authUser) {
       error(t('home.login_required_join', "Necesitas iniciar sesión"));
@@ -448,20 +495,24 @@ const handleAvatarUpload = async (file: File) => {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="mt-8">
-          <TabsList className="grid w-full grid-cols-3 bg-card/50 backdrop-blur-xl border border-border/30">
-            <TabsTrigger value="info" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white transition-all">
-              <User className="w-4 h-4 mr-2" />
-              Información
-            </TabsTrigger>
-            <TabsTrigger value="interests" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-secondary data-[state=active]:to-secondary/80 data-[state=active]:text-white transition-all">
-              <Heart className="w-4 h-4 mr-2" />
-              Intereses
-            </TabsTrigger>
-            <TabsTrigger value="events" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent data-[state=active]:to-accent/80 data-[state=active]:text-white transition-all">
-              <Music className="w-4 h-4 mr-2" />
-              Eventos
-            </TabsTrigger>
-          </TabsList>
+        <TabsList className="grid w-full grid-cols-4 bg-card/50 backdrop-blur-xl border border-border/30">
+        <TabsTrigger value="info" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white transition-all">
+            <User className="w-4 h-4 mr-2" />
+            Información
+        </TabsTrigger>
+        <TabsTrigger value="interests" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-secondary data-[state=active]:to-secondary/80 data-[state=active]:text-white transition-all">
+            <Heart className="w-4 h-4 mr-2" />
+            Intereses
+        </TabsTrigger>
+        <TabsTrigger value="security" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">
+            <Lock className="w-4 h-4 mr-2" />
+            Seguridad
+        </TabsTrigger>
+        <TabsTrigger value="events" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent data-[state=active]:to-accent/80 data-[state=active]:text-white transition-all">
+            <Music className="w-4 h-4 mr-2" />
+            Eventos
+        </TabsTrigger>
+        </TabsList>
 
           {/* Tab Content - Información */}
           <TabsContent value="info" className="mt-6 space-y-4">
@@ -664,6 +715,105 @@ const handleAvatarUpload = async (file: File) => {
             </Card>
           </TabsContent>
 
+               {/* Tab Content - Seguridad */}
+        <TabsContent value="security" className="mt-6">
+        <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-yellow-500/20 shadow-xl">
+            <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <Lock className="w-5 h-5 text-yellow-500" />
+                </div>
+                Seguridad y Privacidad
+            </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            {/* Cambiar contraseña */}
+            <div className="p-4 bg-gradient-to-r from-primary/10 to-transparent rounded-xl border border-primary/20 hover:border-primary/40 transition-all group">
+                <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                    <Lock className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-white">Contraseña</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                    Cambia tu contraseña para mantener tu cuenta segura
+                    </p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPasswordModal(true)}
+                    className="ml-4 border-primary/30 hover:bg-primary/10"
+                >
+                    Cambiar
+                </Button>
+                </div>
+            </div>
+
+            {/* Cambiar email */}
+            <div className="p-4 bg-gradient-to-r from-secondary/10 to-transparent rounded-xl border border-secondary/20 hover:border-secondary/40 transition-all group">
+                <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                    <Mail className="w-5 h-5 text-secondary" />
+                    <h3 className="font-semibold text-white">Email</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                    Email actual: <span className="text-white font-medium">{profile.email}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                    Cambia el email asociado a tu cuenta
+                    </p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmailModal(true)}
+                    className="ml-4 border-secondary/30 hover:bg-secondary/10"
+                >
+                    Cambiar
+                </Button>
+                </div>
+            </div>
+
+            {/* Pregunta de seguridad */}
+            <div className="p-4 bg-gradient-to-r from-yellow-500/10 to-transparent rounded-xl border border-yellow-500/20 hover:border-yellow-500/40 transition-all group">
+                <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                    <Shield className="w-5 h-5 text-yellow-500" />
+                    <h3 className="font-semibold text-white">Pregunta de Seguridad</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                    {profile.securityQuestion 
+                        ? '✅ Configurada - Te ayudará a recuperar tu cuenta' 
+                        : '⚠️ No configurada - Configúrala para mayor seguridad'}
+                    </p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSecurityQuestionModal(true)}
+                    className="ml-4 border-yellow-500/30 hover:bg-yellow-500/10"
+                >
+                    {profile.securityQuestion ? 'Cambiar' : 'Configurar'}
+                </Button>
+                </div>
+            </div>
+
+            {/* Información adicional */}
+            <div className="mt-6 p-4 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                <p className="text-xs text-blue-400 flex items-start gap-2">
+                <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>
+                    <strong>Consejo de seguridad:</strong> Usa una contraseña única y fuerte. Nunca compartas tus credenciales con nadie.
+                </span>
+                </p>
+            </div>
+            </CardContent>
+        </Card>
+        </TabsContent> 
+
           {/* Tab Content - Eventos */}
           <TabsContent value="events" className="mt-6">
             <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-accent/20 shadow-xl">
@@ -782,33 +932,61 @@ const handleAvatarUpload = async (file: File) => {
         </Tabs>
       </div>
 
-      {/* Modales - Completamente independientes del modo edición */}
-      <ImageUploadModal
-        isOpen={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onUpload={handleAvatarUpload}
-        currentImage={avatarUrl}
-        title="Cambiar Avatar"
-        type="avatar"
-      />
-
-      <ImageUploadModal
-        isOpen={showCoverModal}
-        onClose={() => setShowCoverModal(false)}
-        onUpload={handleCoverPhotoUpload}
-        currentImage={coverUrl}
-        title="Cambiar Foto de Portada"
-        type="cover"
-      />
-
-      {selectedEvent && (
-        <EventDetailsModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onJoinToggle={handleJoinToggle}
-          isJoined={isUserJoined(selectedEvent._id)}
+            {/* Modales de imágenes */}
+            <ImageUploadModal
+            isOpen={showAvatarModal}
+            onClose={() => setShowAvatarModal(false)}
+            onUpload={handleAvatarUpload}
+            currentImage={avatarUrl}
+            title="Cambiar Avatar"
+            type="avatar"
         />
-      )}
+
+        <ImageUploadModal
+            isOpen={showCoverModal}
+            onClose={() => setShowCoverModal(false)}
+            onUpload={handleCoverPhotoUpload}
+            currentImage={coverUrl}
+            title="Cambiar Foto de Portada"
+            type="cover"
+        />
+
+        {/* Modales de seguridad */}
+        <ChangePasswordModal
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+            onSuccess={success}
+            onError={error}
+            onChangePassword={handleChangePassword}
+        />
+
+        <ChangeEmailModal
+            isOpen={showEmailModal}
+            onClose={() => setShowEmailModal(false)}
+            currentEmail={profile.email}
+            onSuccess={success}
+            onError={error}
+            onChangeEmail={handleChangeEmail}
+        />
+
+        <SecurityQuestionModal
+            isOpen={showSecurityQuestionModal}
+            onClose={() => setShowSecurityQuestionModal(false)}
+            currentQuestionKey={profile.securityQuestion}
+            onSuccess={success}
+            onError={error}
+            onSetSecurityQuestion={handleSetSecurityQuestion}
+        />
+
+        {/* Modal de eventos */}
+        {selectedEvent && (
+            <EventDetailsModal
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onJoinToggle={handleJoinToggle}
+            isJoined={isUserJoined(selectedEvent._id)}
+            />
+        )}
     </div>
-  );
+);
 }

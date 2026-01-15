@@ -1,3 +1,4 @@
+// src/features/profile/ProfileService.ts
 import api from '../../api';
 
 export const userService = {
@@ -39,7 +40,6 @@ export const userService = {
     }
   },
 
-  // ✅ CORREGIDO - Manejar correctamente la respuesta del avatar
   updateAvatar: async (file: File) => {
     try {
       const formData = new FormData();
@@ -51,7 +51,6 @@ export const userService = {
       
       console.log('Avatar response:', response.data);
       
-      // El backend puede devolver { user: {...} } o directamente el usuario
       if (response.data.user) {
         return response.data.user;
       }
@@ -62,7 +61,6 @@ export const userService = {
     }
   },
 
-  // ✅ CORREGIDO - Manejar correctamente la respuesta del cover
   updateCoverPhoto: async (file: File) => {
     try {
       const formData = new FormData();
@@ -74,7 +72,6 @@ export const userService = {
       
       console.log('Cover photo response:', response.data);
       
-      // El backend puede devolver { user: {...} } o directamente el usuario
       if (response.data.user) {
         return response.data.user;
       }
@@ -140,6 +137,55 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching suggested users:', error);
+      throw error;
+    }
+  },
+
+  // ============================================
+  // 🔒 FUNCIONES DE SEGURIDAD (FASE 2)
+  // ============================================
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    try {
+      const response = await api.post('/user/change-password', {
+        currentPassword,
+        newPassword
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  },
+
+  changeEmail: async (newEmail: string, password: string) => {
+    try {
+      const response = await api.post('/user/change-email', {
+        newEmail,
+        password
+      });
+      if (response.data.user) {
+        return response.data.user;
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error changing email:', error);
+      throw error;
+    }
+  },
+
+  setSecurityQuestion: async (questionKey: string, answer: string) => {
+    try {
+      const response = await api.post('/user/security-question', {
+        securityQuestionKey: questionKey,
+        securityAnswer: answer
+      });
+      if (response.data.user) {
+        return response.data.user;
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error setting security question:', error);
       throw error;
     }
   },

@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Button } from '../../ui/button';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 
 interface ImageUploadModalProps {
