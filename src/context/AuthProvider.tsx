@@ -35,8 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedUser = localStorage.getItem('user');
       
       if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
       }
       setLoading(false);
     };
@@ -51,13 +51,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const t = res.data.token;
       const userData = res.data.user;
       
+      // ✅ CAMBIO CLAVE: Añadir token e id al objeto user
+      const userWithToken = {
+        ...userData,
+        token: t, // ✅ Guardar token en el objeto user
+        id: userData._id || userData.id // ✅ Asegurar que tiene 'id'
+      };
+      
       // Guardamos todo
       localStorage.setItem('token', t);
       localStorage.setItem('refreshToken', res.data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(userWithToken)); // ✅ Guardar user con token
       
       setToken(t);
-      setUser(userData);
+      setUser(userWithToken); // ✅ Actualizar estado con user que incluye token
+      
+      console.log('✅ Login exitoso. Usuario:', userWithToken);
       
     } catch (error) {
       console.error('Login error:', error);
@@ -77,8 +86,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = (userData: any) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    // ✅ MEJORA: Mantener el token al actualizar el usuario
+    const userWithToken = {
+      ...userData,
+      token: token, // ✅ Preservar el token
+      id: userData._id || userData.id // ✅ Preservar el id
+    };
+    
+    setUser(userWithToken);
+    localStorage.setItem('user', JSON.stringify(userWithToken));
   };
 
   // Función auxiliar por si queremos forzar el completado localmente

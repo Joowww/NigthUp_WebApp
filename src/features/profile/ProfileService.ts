@@ -189,4 +189,30 @@ export const userService = {
       throw error;
     }
   },
+  updateExtendedProfile: async (data: {
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+    city?: string;
+    country?: string;
+    website?: string;
+    socialMedia?: {
+      instagram?: string;
+      twitter?: string;
+      facebook?: string;
+      tiktok?: string;
+    };
+  }) => {
+    try {
+      const response = await api.put('/user/profile', data);
+      if (response.data.user) {
+        return response.data.user;
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error updating extended profile:', error);
+      throw error;
+    }
+  },
 };

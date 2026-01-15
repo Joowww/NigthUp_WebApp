@@ -20,8 +20,11 @@ export const Login: React.FC = () => {
     e.preventDefault();
     try {
       await login(email, password); 
-      toast.success('¡Bienvenido '+email+'!');
-      navigate('/', { replace: true });
+      toast.success('¡Bienvenido ' + email + '!');
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 500);
+      
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Error al iniciar sesión');
     }

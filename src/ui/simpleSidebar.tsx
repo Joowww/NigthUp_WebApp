@@ -1,4 +1,4 @@
-// src/components/SimpleSidebar.tsx
+// src/ui/simpleSidebar.tsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { Home, Music, Building2, Calendar, LogOut, ChevronLeft, MessageCircle, L
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import { OnlineStatusBadge } from '../features/OnlineStatusBadge';
 
 interface SimpleSidebarProps {
   isOpen: boolean;
@@ -150,12 +151,25 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 cursor-pointer transition-all group"
           >
-            <Avatar className="w-11 h-11 border-2 border-primary/20 group-hover:border-primary/40 transition-colors">
-              <AvatarImage src={avatarUrl} alt={user?.username} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-bold text-sm">
-                {user?.username?.substring(0, 2).toUpperCase() || 'US'}
-              </AvatarFallback>
-            </Avatar>
+            {/* ✅ AVATAR CON INDICADOR ONLINE */}
+            <div className="relative">
+              <Avatar className="w-11 h-11 border-2 border-primary/20 group-hover:border-primary/40 transition-colors">
+                <AvatarImage src={avatarUrl} alt={user?.username} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-bold text-sm">
+                  {user?.username?.substring(0, 2).toUpperCase() || 'US'}
+                </AvatarFallback>
+              </Avatar>
+              
+              {user?.id && (
+                <div className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
+                  <OnlineStatusBadge 
+                    userId={user.id} 
+                    size="md" 
+                    showOffline={true} 
+                  />
+                </div>
+              )}
+            </div>  
             
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.username}</p>

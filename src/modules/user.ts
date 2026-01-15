@@ -98,3 +98,17 @@ export const SECURITY_QUESTIONS: Record<SecurityQuestionKey, string> = {
   "security.question.graduation_year": "¿En qué año te graduaste de la secundaria?",
   "security.question.favorite_movie": "¿Cuál es el nombre de tu película favorita?"
 };
+
+export type { 
+    UserTrust, 
+    UserTrustStats, 
+    UserTrustSummary, 
+    TrustContext,
+    UserTrustRater 
+  } from './userTrust';
+  
+  export { 
+    calculateTrustLevel, 
+    getTrustLevelColor, 
+    getTrustLevelIcon 
+  } from './userTrust';

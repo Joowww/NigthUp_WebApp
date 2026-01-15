@@ -21,16 +21,23 @@ class SocketService {
   private userId: string | null = null;
 
   connect(userId: string, token: string) {
-    if (this.socket?.connected) {
-      console.log('Socket ya conectado');
+    // Si ya hay una conexión válida, no volver a crearla
+    if (this.socket && this.socket.connected) {
+      console.log('🔁 Socket ya conectado');
       return;
     }
 
+    console.log('🔌 Creando socket con userId:', userId);
+
     this.userId = userId;
-    
+
     this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
-      auth: { userId, token },
-      transports: ['websocket', 'polling'],
+      autoConnect: false,                 // 🔴 CLAVE: no conectar hasta tener auth
+      auth: {
+        userId,
+        token
+      },
+      transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5
@@ -38,6 +45,9 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('✅ Socket conectado:', this.socket?.id);
+
+      // 🔥 Forzar sincronización inmediata de usuarios online
+      this.socket?.emit('getOnlineUsers');
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -47,21 +57,26 @@ class SocketService {
     this.socket.on('connect_error', (error) => {
       console.error('❌ Error de conexión:', error.message);
     });
+
+    // ⏱️ AHORA sí conectamos
+    this.socket.connect();
   }
 
   disconnect() {
     if (this.socket) {
+      console.log('🧹 Cerrando socket');
       this.socket.disconnect();
       this.socket = null;
       this.userId = null;
     }
   }
+
   getUserId(): string | null {
     return this.userId;
   }
 
   // ============================================
-  // EVENTOS PARA ENVIAR AL SERVIDOR
+  // EMIT
   // ============================================
 
   joinRoom(conversationId: string) {
@@ -100,106 +115,73 @@ class SocketService {
     this.socket?.emit('stopTyping', data);
   }
 
-  // ============================================
-  // EVENTOS PARA ESCUCHAR DEL SERVIDOR
-  // ============================================
-
-  onNewMessage(callback: (message: SocketNewMessageEvent) => void) {
-    this.socket?.on('newMessage', callback);
-  }
-
-  onMessageEdited(callback: (message: SocketMessageEditedEvent) => void) {
-    this.socket?.on('messageEdited', callback);
-  }
-
-  onMessageDeleted(callback: (data: SocketMessageDeletedEvent) => void) {
-    this.socket?.on('messageDeleted', callback);
-  }
-
-  onMessageReacted(callback: (data: SocketMessageReactedEvent) => void) {
-    this.socket?.on('messageReacted', callback);
-  }
-
-  onNewGroup(callback: (group: SocketNewGroupEvent) => void) {
-    this.socket?.on('newGroup', callback);
-  }
-
-  onGroupCreated(callback: (data: { groupId: string; name: string }) => void) {
-    this.socket?.on('groupCreated', callback);
-  }
-
-  onMessageBlocked(callback: (data: SocketMessageBlockedEvent) => void) {
-    this.socket?.on('messageBlocked', callback);
-  }
-
-  onUserTyping(callback: (data: SocketUserTypingEvent) => void) {
-    this.socket?.on('userTyping', callback);
-  }
-
-  onUserStoppedTyping(callback: (data: SocketUserTypingEvent) => void) {
-    this.socket?.on('userStoppedTyping', callback);
-  }
-
-  onError(callback: (error: SocketErrorEvent) => void) {
-    this.socket?.on('error', callback);
+  requestOnlineUsers() {
+    this.socket?.emit('getOnlineUsers');
   }
 
   // ============================================
-  // DESUSCRIBIR EVENTOS
+  // ON
   // ============================================
 
-  offNewMessage() {
-    this.socket?.off('newMessage');
+  onNewMessage(cb: (m: SocketNewMessageEvent) => void) {
+    this.socket?.on('newMessage', cb);
   }
 
-  offMessageEdited() {
-    this.socket?.off('messageEdited');
+  onMessageEdited(cb: (m: SocketMessageEditedEvent) => void) {
+    this.socket?.on('messageEdited', cb);
   }
 
-  offMessageDeleted() {
-    this.socket?.off('messageDeleted');
+  onMessageDeleted(cb: (d: SocketMessageDeletedEvent) => void) {
+    this.socket?.on('messageDeleted', cb);
   }
 
-  offMessageReacted() {
-    this.socket?.off('messageReacted');
+  onMessageReacted(cb: (d: SocketMessageReactedEvent) => void) {
+    this.socket?.on('messageReacted', cb);
   }
 
-  offNewGroup() {
-    this.socket?.off('newGroup');
+  onNewGroup(cb: (g: SocketNewGroupEvent) => void) {
+    this.socket?.on('newGroup', cb);
   }
 
-  offGroupCreated() {
-    this.socket?.off('groupCreated');
+  onMessageBlocked(cb: (d: SocketMessageBlockedEvent) => void) {
+    this.socket?.on('messageBlocked', cb);
   }
 
-  offMessageBlocked() {
-    this.socket?.off('messageBlocked');
+  onUserTyping(cb: (d: SocketUserTypingEvent) => void) {
+    this.socket?.on('userTyping', cb);
   }
 
-  offUserTyping() {
-    this.socket?.off('userTyping');
+  onUserStoppedTyping(cb: (d: SocketUserTypingEvent) => void) {
+    this.socket?.on('userStoppedTyping', cb);
   }
 
-  offUserStoppedTyping() {
-    this.socket?.off('userStoppedTyping');
+  onError(cb: (e: SocketErrorEvent) => void) {
+    this.socket?.on('error', cb);
   }
 
-  offError() {
-    this.socket?.off('error');
+  // 🟢 PRESENCIA
+  onOnlineUsers(cb: (userIds: string[]) => void) {
+    this.socket?.on('onlineUsers', cb);
   }
 
-  // Limpiar todos los listeners
+  onUserDisconnected(cb: (data: { userId: string }) => void) {
+    this.socket?.on('userDisconnected', cb);
+  }
+
+  // ============================================
+  // OFF
+  // ============================================
+
+  offOnlineUsers() {
+    this.socket?.off('onlineUsers');
+  }
+
+  offUserDisconnected() {
+    this.socket?.off('userDisconnected');
+  }
+
   offAll() {
-    this.offNewMessage();
-    this.offMessageEdited();
-    this.offMessageDeleted();
-    this.offMessageReacted();
-    this.offNewGroup();
-    this.offGroupCreated();
-    this.offMessageBlocked();
-    this.offUserTyping();
-    this.offUserStoppedTyping();
-    this.offError();
+    this.socket?.removeAllListeners();
   }
 
   isConnected(): boolean {
