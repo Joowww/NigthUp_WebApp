@@ -12,18 +12,27 @@ export type SearchFriendshipStatus =
   | 'pending_received'
   | 'blocked';
 
+// ✅ TIPO COMPLETO PARA SearchUser
 export interface SearchUser {
   _id: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
   avatar?: string;
+  bio?: string;
+  city?: string;
+  comunidad?: string;
+  intereses?: string[];
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  isOnline?: boolean;
+  lastSeen?: Date;
   status: SearchFriendshipStatus;
   friendshipId: string | null;
 }
 
-
 export interface Friendship {
   _id: string;
-  requester: string | User; // Puede ser ID o objeto poblado
+  requester: string | User;
   recipient: string | User;
   status: FriendshipStatus;
   createdAt: Date;
@@ -70,7 +79,7 @@ export interface PublicProfileResponse {
 export interface FriendshipStatusResponse {
   status: FriendshipStatus;
   friendshipId?: string;
-  isPendingByMe?: boolean; // Si YO envié la solicitud
+  isPendingByMe?: boolean;
 }
 
 export interface PendingRequestsResponse {
@@ -80,41 +89,31 @@ export interface PendingRequestsResponse {
 
 // ==================== HELPERS ====================
 
-/**
- * Verifica si dos usuarios son amigos
- */
 export function areFriends(status: FriendshipStatus): boolean {
   return status === 'accepted';
 }
 
-/**
- * Verifica si hay una solicitud pendiente
- */
 export function hasPendingRequest(status: FriendshipStatus): boolean {
   return status === 'pending';
 }
 
-/**
- * Verifica si el usuario está bloqueado
- */
 export function isBlocked(status: FriendshipStatus): boolean {
   return status === 'blocked';
 }
 
-/**
- * Obtiene el nombre completo de un usuario
- */
-export function getFullName(user: PublicUser): string {
-  if (user.firstName && user.lastName) {
-    return `${user.firstName} ${user.lastName}`;
-  }
-  if (user.firstName) {
-    return user.firstName;
+export function getFullName(user: PublicUser | SearchUser): string {
+  if ('firstName' in user && 'lastName' in user) {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.firstName) {
+      return user.firstName;
+    }
   }
   return user.username;
 }
 
-export function getAvatarUrl(user: PublicUser): string {
+export function getAvatarUrl(user: PublicUser | SearchUser): string {
   if (!user.avatar) {
     return '/default-avatar.png';
   }

@@ -13,53 +13,55 @@ export const friendshipService = {
   // ==================== BÚSQUEDA Y DESCUBRIMIENTO ====================
 
   /**
-   * Obtener usuarios sugeridos (ADAPTADO para usar /api/user)
+   * Buscar usuarios con filtros completos
    */
-  getSuggestedUsers: async (limit = 20): Promise<PublicUser[]> => {
+  searchUsers: async (
+    query: string = '',
+    limit: number = 20,
+    skip: number = 0,
+    city: string = '',
+    interest: string = '',
+    gender: string = '',
+    onlineOnly: boolean = false
+  ): Promise<SearchUser[]> => {
     try {
-      // ✅ USAR ENDPOINT EXISTENTE /api/user
-      const response = await api.get(`/user?skip=0&limit=${limit}`);
+      const params = new URLSearchParams();
       
-      // El backend puede devolver { users: [...] } o directamente [...]
-      const users = response.data.users || response.data;
-      
-      // Filtrar para excluir usuarios sin intereses o ciudad (opcional)
-      return users.filter((user: PublicUser) => 
-        user.intereses && user.intereses.length > 0
-      );
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      throw error;
-    }
-  },
+      // Solo añadir parámetros si tienen valor
+      if (query.trim()) params.append('search', query.trim());
+      params.append('limit', limit.toString());
+      params.append('skip', skip.toString());
+      if (city.trim()) params.append('city', city.trim());
+      if (interest.trim()) params.append('interest', interest.trim());
+      if (gender.trim()) params.append('gender', gender.trim());
+      if (onlineOnly) params.append('onlineOnly', 'true');
 
-  /**
-   * Obtener todos los usuarios (para búsqueda local)
-   */
-  getAllUsers: async (skip = 0, limit = 100): Promise<PublicUser[]> => {
-    try {
-      const response = await api.get(`/user?skip=${skip}&limit=${limit}`);
-      return response.data.users || response.data;
-    } catch (error) {
-      console.error('Error fetching all users:', error);
-      throw error;
-    }
-  },
+      console.log('🌐 [friendshipService] GET /friendship/search?' + params.toString());
 
-  /**
-   * Obtener perfil público de un usuario
-   */
-  getPublicProfile: async (username: string): Promise<PublicProfileResponse> => {
-    try {
-      const response = await api.get(`/user/profile/${username}`);
+      const response = await api.get(`/friendship/search?${params.toString()}`);
+
+      console.log('📦 [friendshipService] Respuesta:', response.data.length, 'usuarios');
+
       return response.data;
     } catch (error) {
-      console.error('Error fetching public profile:', error);
+      console.error('❌ [friendshipService] Error searching users:', error);
       throw error;
     }
   },
 
-  // ==================== SOLICITUDES DE AMISTAD ====================
+  /**
+   * Obtener opciones únicas para filtros
+   */
+  getFilterOptions: async (): Promise<{ cities: string[], interests: string[] }> => {
+    try {
+      console.log('🌐 [friendshipService] GET /friendship/filter-options');
+      const response = await api.get('/friendship/filter-options');
+      return response.data;
+    } catch (error) {
+      console.error('❌ [friendshipService] Error fetching filter options:', error);
+      return { cities: [], interests: [] };
+    }
+  },
 
   /**
    * Enviar solicitud de amistad
@@ -81,7 +83,6 @@ export const friendshipService = {
     try {
       const response = await api.get('/friendship/pending');
       
-      // Si el backend devuelve solo received, adaptar
       if (Array.isArray(response.data)) {
         return {
           sent: [],
@@ -120,8 +121,6 @@ export const friendshipService = {
       throw error;
     }
   },
-
-  // ==================== AMIGOS ====================
 
   /**
    * Obtener lista de amigos
@@ -174,18 +173,15 @@ export const friendshipService = {
   },
 
   /**
- * Buscar usuarios para amistad (backend-driven)
- */
-searchUsers: async (query: string): Promise<SearchUser[]> => {
+   * Obtener perfil público de un usuario
+   */
+  getPublicProfile: async (username: string): Promise<PublicProfileResponse> => {
     try {
-      const response = await api.get('/friendship/search', {
-        params: { q: query }
-      });
+      const response = await api.get(`/user/profile/${username}`);
       return response.data;
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('Error fetching public profile:', error);
       throw error;
     }
   },
-  
 };
