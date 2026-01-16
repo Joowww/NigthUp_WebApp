@@ -1,4 +1,4 @@
-// AppRoutes.tsx - VERSIÓN CORREGIDA
+// AppRoutes.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from '../features/auth/Login';
@@ -15,6 +15,7 @@ import { ChatPage } from '../features/chat/ChatPage';
 import { CreatorPage } from '../features/manager/CreatorPage';
 import { BusinessPage } from '../features/business/BusinessPage';
 import { MyProfile } from '../features/profile/MyProfile';
+import DiscoverPeople from '../features/friendship/DiscoverPeople'; 
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -23,10 +24,9 @@ export const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rutas públicas - siempre accesibles */}
+        {/* Rutas públicas */}
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
-
 
         {/* Rutas protegidas */}
         <Route path="/*" element={
@@ -38,19 +38,18 @@ export const AppRoutes: React.FC = () => {
             )}
           </PrivateRoute>
         }>
-          {/* Solo mostrar rutas anidadas si NO necesita onboarding */}
           {!needsOnboarding && (
             <>
               <Route index element={<HomePage />} />
               <Route path="events" element={<EventsPage />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="friendship" element={<DiscoverPeople />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="business" element={<BusinessPage />} />
               <Route path="profile" element={<MyProfile />} /> 
               <Route element={<ManagerRoute />}>
                 <Route path="manager" element={<CreatorPage />} />
               </Route>
-            
             </>
           )}
         </Route>

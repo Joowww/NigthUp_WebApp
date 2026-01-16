@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Music, Building2, Calendar, LogOut, ChevronLeft, MessageCircle, LayoutDashboard, Heart, User, Settings } from 'lucide-react';
+import { Home, Music, Building2, Calendar, LogOut, ChevronLeft,
+   MessageCircle, LayoutDashboard, Heart, User, Settings, Users } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
@@ -25,6 +26,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     { id: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
     { id: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
     { id: '/business', label: t('sidebar.venues', 'Discotecas'), icon: Building2 },
+    { id: '/friendship', label: 'Amigos', icon: Users },
     { id: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
     { id: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
     { id: '/favorites', label: 'Favoritos', icon: Heart },

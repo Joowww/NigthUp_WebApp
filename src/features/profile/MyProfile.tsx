@@ -9,7 +9,7 @@ import { Edit, Save, X, Upload, MapPin, Calendar, Mail, Phone, User, Heart, Musi
      Users, Loader2, Plus, Lock, Shield, Star, Award, TrendingUp } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ChangeEmailModal } from './ChangeEmailModal';
-import { SecurityQuestionModal } from './securityQuestionModal';
+import { SecurityQuestionModal } from './SecurityQuestionModal';
 import { userService } from './ProfileService';
 import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
 import { EventDetailsModal } from '../events/EventDetailsModal';
