@@ -1,5 +1,5 @@
 // src/features/friendship/DiscoverPeople.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, UserPlus, Loader2, X, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
 import { Input } from '../../ui/input';
@@ -10,9 +10,10 @@ import { friendshipService } from './friendshipService';
 import { UserCard } from './UserCard';
 import { UserProfileModal } from './UserProfileModal';
 import type { SearchUser } from '../../modules/friendship';
+import { useOnlineUsers } from '../../context/OnlineUsersContext'; // ✅ IMPORTAR
 
 export default function DiscoverPeople() {
-  const [users, setUsers] = useState<SearchUser[]>([]);
+  const [allUsers, setAllUsers] = useState<SearchUser[]>([]); // ✅ Todos los usuarios cargados
   const [loading, setLoading] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,20 +33,16 @@ export default function DiscoverPeople() {
   }>({ cities: [], interests: [] });
 
   const { success, error } = useToast();
+  const { isUserOnline } = useOnlineUsers(); // ✅ Hook de usuarios online
 
-  const USERS_PER_PAGE = 9; // 3x3 grid
+  const USERS_PER_PAGE = 9;
 
   // Cargar opciones de filtros
   useEffect(() => {
     loadFilterOptions();
   }, []);
 
-  // Cargar usuarios cuando cambie página, búsqueda o filtros
-  useEffect(() => {
-    loadUsers();
-  }, [currentPage]);
-
-  // Reset a página 1 cuando cambien filtros o búsqueda
+  // Cargar usuarios cuando cambien filtros (excepto onlineOnly)
   useEffect(() => {
     const timeout = setTimeout(() => {
       setCurrentPage(1);
@@ -53,7 +50,7 @@ export default function DiscoverPeople() {
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters.city, filters.interest, filters.gender]);
 
   const loadFilterOptions = async () => {
     try {
@@ -67,48 +64,79 @@ export default function DiscoverPeople() {
 
   const loadUsers = async () => {
     try {
-      const skip = (currentPage - 1) * USERS_PER_PAGE;
-  
-      console.log(`🔄 Cargando página ${currentPage} con filtros:`, {
+      console.log(`🔄 Cargando usuarios con filtros:`, {
         searchQuery,
         city: filters.city,
         interest: filters.interest,
-        gender: filters.gender,
-        onlineOnly: filters.onlineOnly
+        gender: filters.gender
       });
       
       setLoading(true);
-  
+
+      // ✅ Cargar TODOS los usuarios sin paginación (o con límite alto)
       const fetchedUsers = await friendshipService.searchUsers(
         searchQuery,
-        USERS_PER_PAGE,
-        skip,
+        1000, // ✅ Cargar muchos usuarios para filtrar localmente
+        0,
         filters.city,
         filters.interest,
-        filters.gender,        // ✅ Añadido
-        filters.onlineOnly    // ✅ Añadido
+        filters.gender,
+        false // ✅ NO filtrar por online en backend
       );
-  
+
       console.log(`✅ Usuarios recibidos: ${fetchedUsers.length}`);
-  
-      setUsers(fetchedUsers);
-      setTotalUsers(fetchedUsers.length < USERS_PER_PAGE ? skip + fetchedUsers.length : skip + USERS_PER_PAGE + 1);
+
+      setAllUsers(fetchedUsers);
+      setTotalUsers(fetchedUsers.length);
     } catch (err) {
       console.error('❌ Error loading users:', err);
       error('Error al cargar usuarios');
-      setUsers([]);
+      setAllUsers([]);
       setTotalUsers(0);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Filtrar usuarios online en FRONTEND
+  const filteredUsers = useMemo(() => {
+    console.log(`🔍 Filtrando usuarios. Total: ${allUsers.length}, onlineOnly: ${filters.onlineOnly}`);
+    
+    let result = allUsers;
+
+    // Filtrar solo usuarios online si está activo el checkbox
+    if (filters.onlineOnly) {
+      result = result.filter(user => {
+        const online = isUserOnline(user._id);
+        if (online) {
+          console.log(`🟢 Usuario ${user.username} está ONLINE`);
+        }
+        return online;
+      });
+      console.log(`✅ Usuarios online encontrados: ${result.length}`);
+    }
+
+    return result;
+  }, [allUsers, filters.onlineOnly, isUserOnline]);
+
+  // ✅ Paginación local
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    const endIndex = startIndex + USERS_PER_PAGE;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
+
+  // Reset página cuando cambie onlineOnly
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.onlineOnly]);
+
   const handleSendRequest = async (userId: string) => {
     try {
       await friendshipService.sendFriendRequest(userId);
       success('¡Solicitud enviada! 🎉');
 
-      setUsers((prev) =>
+      setAllUsers((prev) =>
         prev.map((user) =>
           user._id === userId ? { ...user, status: 'pending_sent' as any } : user
         )
@@ -131,8 +159,8 @@ export default function DiscoverPeople() {
   };
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
-  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
-  const hasNextPage = users.length === USERS_PER_PAGE;
+  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  const hasNextPage = currentPage < totalPages;
   const hasPrevPage = currentPage > 1;
 
   return (
@@ -147,7 +175,7 @@ export default function DiscoverPeople() {
             Conecta con personas que comparten tus gustos musicales y sal de fiesta juntos 🎉
           </p>
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <span>👥 {totalUsers}+ usuarios disponibles</span>
+            <span>👥 {filteredUsers.length} usuarios {filters.onlineOnly ? 'online' : 'disponibles'}</span>
             <span>•</span>
             <span>🎵 {filterOptions.interests.length} géneros musicales</span>
             <span>•</span>
@@ -277,8 +305,8 @@ export default function DiscoverPeople() {
                 </div>
               </div>
 
-              {/* Filtro solo online */}
-              <div className="flex items-center gap-3 p-3 bg-background/50 rounded-lg border border-border/50">
+              {/* Filtro solo online - MEJORADO */}
+              <div className="flex items-center gap-3 p-4 bg-background/70 rounded-lg border border-primary/20 hover:border-primary/40 transition-colors">
                 <input
                   type="checkbox"
                   id="onlineOnly"
@@ -286,10 +314,15 @@ export default function DiscoverPeople() {
                   onChange={(e) => setFilters({ ...filters, onlineOnly: e.target.checked })}
                   className="w-5 h-5 rounded border-input cursor-pointer accent-primary"
                 />
-                <label htmlFor="onlineOnly" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                <label htmlFor="onlineOnly" className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                   Mostrar solo usuarios activos ahora
                 </label>
+                {filters.onlineOnly && (
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
+                    {filteredUsers.length} online
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -314,16 +347,17 @@ export default function DiscoverPeople() {
                   )}
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  {users.length > 0
-                    ? `Mostrando ${users.length} personas en esta página`
-                    : 'No hay resultados para mostrar'}
+                  {paginatedUsers.length > 0
+                    ? `Mostrando ${paginatedUsers.length} de ${filteredUsers.length} ${filters.onlineOnly ? 'usuarios online' : 'personas'}`
+                    : filters.onlineOnly
+                      ? 'No hay usuarios online con estos filtros'
+                      : 'No hay resultados para mostrar'}
                 </CardDescription>
               </div>
               
-              {/* Info de paginación */}
-              {users.length > 0 && (
+              {paginatedUsers.length > 0 && (
                 <Badge variant="outline" className="text-sm">
-                  Página {currentPage}
+                  Página {currentPage} de {totalPages}
                 </Badge>
               )}
             </div>
@@ -337,19 +371,24 @@ export default function DiscoverPeople() {
                   Buscando personas increíbles...
                 </p>
               </div>
-            ) : users.length === 0 ? (
+            ) : paginatedUsers.length === 0 ? (
               <div className="text-center py-32">
                 <div className="mb-6">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
                     <UserPlus className="w-12 h-12 text-muted-foreground/50" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">
-                    No encontramos personas con estas características
+                    {filters.onlineOnly 
+                      ? '😴 No hay usuarios online ahora mismo'
+                      : 'No encontramos personas con estas características'
+                    }
                   </h3>
                   <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                    {searchQuery || activeFiltersCount > 0
-                      ? 'Intenta ajustar tus filtros de búsqueda o busca un término diferente'
-                      : 'Parece que no hay usuarios disponibles en este momento'}
+                    {filters.onlineOnly
+                      ? 'Intenta desactivar el filtro de "solo online" o vuelve más tarde cuando más gente esté conectada'
+                      : searchQuery || activeFiltersCount > 0
+                        ? 'Intenta ajustar tus filtros de búsqueda o busca un término diferente'
+                        : 'Parece que no hay usuarios disponibles en este momento'}
                   </p>
                 </div>
                 {(searchQuery || activeFiltersCount > 0) && (
@@ -367,7 +406,7 @@ export default function DiscoverPeople() {
               <>
                 {/* Grid de usuarios */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {users.map((user) => (
+                  {paginatedUsers.map((user) => (
                     <UserCard
                       key={user._id}
                       user={user}
@@ -379,55 +418,54 @@ export default function DiscoverPeople() {
                 </div>
 
                 {/* Paginación */}
-                <div className="flex items-center justify-between pt-6 border-t border-border/50">
-                  <p className="text-sm text-muted-foreground">
-                    {users.length < USERS_PER_PAGE
-                      ? `Mostrando todos los resultados (${users.length})`
-                      : `Mostrando ${(currentPage - 1) * USERS_PER_PAGE + 1}-${currentPage * USERS_PER_PAGE}`}
-                  </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {((currentPage - 1) * USERS_PER_PAGE) + 1}-{Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length}
+                    </p>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={!hasPrevPage || loading}
-                      className="gap-2"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      Anterior
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={!hasPrevPage}
+                        className="gap-2"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Anterior
+                      </Button>
 
-                    <div className="hidden sm:flex items-center gap-1 mx-2">
-                      {[...Array(Math.min(5, totalPages))].map((_, idx) => {
-                        const pageNum = idx + 1;
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => setCurrentPage(pageNum)}
-                            disabled={loading}
-                            className="w-10"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
+                      <div className="hidden sm:flex items-center gap-1 mx-2">
+                        {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+                          const pageNum = idx + 1;
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="w-10"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={!hasNextPage}
+                        className="gap-2"
+                      >
+                        Siguiente
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
                     </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                      disabled={!hasNextPage || loading}
-                      className="gap-2"
-                    >
-                      Siguiente
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
+                )}
               </>
             )}
           </CardContent>
