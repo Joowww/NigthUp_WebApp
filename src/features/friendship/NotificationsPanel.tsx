@@ -5,15 +5,12 @@ import { Bell, Check, CheckCheck, Trash2, X, UserPlus, UserCheck, Loader2 } from
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { Button } from '../../ui/button';
 import { ScrollArea } from '../../ui/scroll-area';
-import { useNotifications } from '../../hooks/useNotifications';
-import { friendshipService } from './friendshipService';
-import { socketService } from '../../lib/socket';
-import { useAuth } from '../../hooks/useAuth';
 import { getAvatarUrl } from '../../modules/friendship';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { useFriendshipContext } from '../../context/FriendshipContext';
+import { useNotificationsContext } from '../../context/NotificationsContext';
+import { useFriendshipActions } from './FriendshipActions';
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -21,77 +18,99 @@ interface NotificationsPanelProps {
 }
 
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
-  const { notifications, unreadCount, loading, markAllAsRead, deleteNotification, refresh } = useNotifications();
-  const { user } = useAuth();
-  const { updateFriendship } = useFriendshipContext(); // ✅ AÑADIR
+  const { 
+    notifications, 
+    unreadCount, 
+    loading, 
+    markAsRead,       
+    deleteNotification, 
+    refresh,
+    setNotifications, 
+    setUnreadCount,
+    markAllAsRead
+  } = useNotificationsContext();
+
+  const { acceptFriendRequest, rejectFriendRequest } = useFriendshipActions();
   const navigate = useNavigate();
   const [processingIds, setProcessingIds] = React.useState<string[]>([]);
-
+  
   if (!isOpen) return null;
 
-  // ✅ FUNCIÓN: Aceptar solicitud
-  
-const handleAcceptRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
+  // ✅ ACEPTAR SOLICITUD
+  const handleAcceptRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
     setProcessingIds(prev => [...prev, notificationId]);
     
     try {
       console.log('✅ [NotificationsPanel] Aceptando solicitud:', { notificationId, friendshipId, senderId });
       
-      // ✅ ACEPTAR SOLICITUD
-      const response = await friendshipService.acceptFriendRequestV2(friendshipId);
-      console.log('✅ [NotificationsPanel] Respuesta:', response);
+      // ✅ 1. Aceptar usando acción unificada (actualiza contexto + emite socket)
+      await acceptFriendRequest(friendshipId, senderId);
       
-      // ✅ ACTUALIZAR CONTEXTO - Ahora son amigos
-      updateFriendship(senderId, 'friends', friendshipId);
+      // ✅ 2. Eliminar notificación localmente (UX inmediata)
+      setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      setUnreadCount(prev => Math.max(0, prev - 1));
       
-      // ✅ EMITIR SOCKET
-      if (user?.id) {
-        socketService.emitFriendRequestAccepted(senderId, user.id, friendshipId);
+      // ✅ 3. Eliminar del backend
+      try {
+        await deleteNotification(notificationId);
+        console.log('✅ [NotificationsPanel] Notificación eliminada del backend');
+      } catch (deleteErr) {
+        console.error('⚠️ Error eliminando notificación:', deleteErr);
       }
       
-      // ✅ ELIMINAR NOTIFICACIÓN (ahora con validación de ID temporal)
-      await deleteNotification(notificationId);
-      
-      // ✅ REFRESCAR LISTA COMPLETA
-      await refresh();
-      
-      console.log('✅ [NotificationsPanel] Solicitud aceptada correctamente');
+      console.log('✅ [NotificationsPanel] Solicitud aceptada y card actualizada');
       
     } catch (err: any) {
-      console.error('❌ [NotificationsPanel] Error aceptando solicitud:', err);
-      console.error('❌ [NotificationsPanel] Detalles:', err.response?.data);
+      console.error('❌ [NotificationsPanel] Error aceptando:', err);
+      await refresh();
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== notificationId));
+    }
+  };
+  
+  // ✅ RECHAZAR SOLICITUD
+  const handleRejectRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
+    setProcessingIds(prev => [...prev, notificationId]);
+    
+    try {
+      console.log('❌ [NotificationsPanel] Rechazando solicitud:', { notificationId, friendshipId, senderId });
+      
+      // ✅ 1. Rechazar usando acción unificada (actualiza contexto + emite socket)
+      await rejectFriendRequest(friendshipId, senderId, false);
+      
+      // ✅ 2. Eliminar notificación localmente
+      setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // ✅ 3. Eliminar del backend
+      try {
+        await deleteNotification(notificationId);
+        console.log('✅ [NotificationsPanel] Notificación eliminada del backend');
+      } catch (deleteErr) {
+        console.error('⚠️ Error eliminando notificación:', deleteErr);
+      }
+      
+      console.log('✅ [NotificationsPanel] Solicitud rechazada y card actualizada');
+      
+    } catch (err: any) {
+      console.error('❌ [NotificationsPanel] Error rechazando:', err);
+      await refresh();
     } finally {
       setProcessingIds(prev => prev.filter(id => id !== notificationId));
     }
   };
 
-   // ✅ FUNCIÓN: Rechazar solicitud
-  const handleRejectRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
-  setProcessingIds(prev => [...prev, notificationId]);
-  
-  try {
-    console.log('❌ [NotificationsPanel] Rechazando solicitud:', { notificationId, friendshipId, senderId });
-    
-    await friendshipService.cancelFriendRequestV2(friendshipId);
-    
-    updateFriendship(senderId, 'none', null);
-    
-    // ✅ EMITIR CON senderId
-    if (user?.id) {
-      socketService.emitFriendRequestCancelled(senderId, friendshipId, user.id); // ✅ AÑADIR user.id
+  // ✅ MARCAR COMO LEÍDA AL HACER CLICK
+  const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
+    if (!isRead) {
+      try {
+        await markAsRead(notificationId);
+        console.log('✅ [NotificationsPanel] Notificación marcada como leída:', notificationId);
+      } catch (err) {
+        console.error('❌ Error marcando como leída:', err);
+      }
     }
-    
-    await deleteNotification(notificationId);
-    await refresh();
-    
-    console.log('✅ [NotificationsPanel] Solicitud rechazada correctamente');
-    
-  } catch (err: any) {
-    console.error('❌ [NotificationsPanel] Error rechazando solicitud:', err);
-  } finally {
-    setProcessingIds(prev => prev.filter(id => id !== notificationId));
-  }
-};
+  };
 
   const handleGoToFriendship = () => {
     navigate('/friendship');
@@ -171,10 +190,8 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
                 return (
                   <div
                     key={notification._id}
-                    className={`
-                      p-4 transition-all
-                      ${isUnread ? 'bg-primary/5' : ''}
-                    `}
+                    className={`p-4 transition-all cursor-pointer ${isUnread ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/30'}`}
+                    onClick={() => handleNotificationClick(notification._id, notification.read)}
                   >
                     <div className="flex gap-3">
                       {/* Avatar */}
@@ -189,7 +206,6 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
                           </AvatarFallback>
                         </Avatar>
                         
-                        {/* Icon tipo notificación */}
                         <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-border flex items-center justify-center">
                           {notification.type === 'friend_request' ? (
                             <UserPlus className="w-3 h-3 text-primary" />
@@ -201,15 +217,41 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
+                        {/* Header con botón eliminar */}
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <p className="text-sm font-medium text-foreground truncate">
+                          <p className="text-sm font-medium text-foreground truncate flex-1">
                             {fullName}
                           </p>
-                          {isUnread && (
-                            <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1" />
-                          )}
+                          
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {isUnread && (
+                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                            )}
+                            
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  setNotifications(prev => prev.filter(n => n._id !== notification._id));
+                                  if (!notification.read) {
+                                    setUnreadCount(prev => Math.max(0, prev - 1));
+                                  }
+                                  await deleteNotification(notification._id);
+                                  console.log('✅ [NotificationsPanel] Notificación eliminada');
+                                } catch (err) {
+                                  console.error('❌ Error eliminando:', err);
+                                  await refresh();
+                                }
+                              }}
+                              className="p-1 hover:bg-red-500/10 rounded-md transition-colors group"
+                              title="Eliminar notificación"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-muted-foreground group-hover:text-red-500" />
+                            </button>
+                          </div>
                         </div>
 
+                        {/* Mensaje */}
                         <p className="text-sm text-muted-foreground mb-2">
                           {notification.type === 'friend_request' 
                             ? 'Te envió una solicitud de amistad'
@@ -217,7 +259,8 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
                           }
                         </p>
 
-                        <div className="flex items-center justify-between mb-3">
+                        {/* Timestamp */}
+                        <div className="mb-3">
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(notification.createdAt), { 
                               addSuffix: true,
@@ -226,9 +269,9 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
                           </span>
                         </div>
 
-                        {/* ✅ BOTONES DE ACCIÓN - Solo para solicitudes pendientes */}
+                        {/* Botones de acción */}
                         {notification.type === 'friend_request' && (
-                          <div className="flex gap-2">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               onClick={() => handleAcceptRequest(
                                 notification._id,
@@ -264,19 +307,6 @@ const handleAcceptRequest = async (notificationId: string, friendshipId: string,
                               )}
                               Rechazar
                             </Button>
-                          </div>
-                        )}
-
-                        {/* Botón eliminar para notificaciones de aceptación */}
-                        {notification.type !== 'friend_request' && (
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => deleteNotification(notification._id)}
-                              className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
-                            </button>
                           </div>
                         )}
                       </div>

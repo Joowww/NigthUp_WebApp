@@ -88,6 +88,21 @@ export interface PendingRequestsResponse {
   received: Friendship[];
 }
 
+export interface PublicUserWithFriendship extends PublicUser {
+    status?: FriendshipStatusType;
+    friendshipId?: string | null;
+  }
+  
+  /**
+   * Tipos de estado de amistad
+   */
+  export type FriendshipStatusType = 
+    | 'none' 
+    | 'pending_sent'
+    | 'pending_received'
+    | 'friends'
+    | 'blocked';
+
 // ==================== HELPERS ====================
 
 export function areFriends(status: FriendshipStatus): boolean {

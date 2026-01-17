@@ -20,8 +20,9 @@ import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { OnlineStatusBadge } from '../features/OnlineStatusBadge';
-import { useNotifications } from '../hooks/useNotifications';
 import { NotificationBadge } from '../features/friendship/NotificationsBadge';
+import { useNotificationsContext } from '../context/NotificationsContext'; // ✅ CAMBIAR
+
 
 
 interface SimpleSidebarProps {
@@ -36,13 +37,13 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { unreadCount } = useNotifications(); 
+  const { unreadCount } = useNotificationsContext(); 
 
   const menuItems = [
     { path: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
     { path: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
     { path: '/business', label: t('sidebar.venues', 'Discotecas'), icon: Building2 },
-    { path: '/friendship', label: 'Amigos', icon: Users }, // ✅ Este tendrá el badge
+    { path: '/friendship', label: 'Amigos', icon: Users },
     { path: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
     { path: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
     { path: '/favorites', label: 'Favoritos', icon: Heart },

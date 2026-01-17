@@ -1,4 +1,5 @@
 // src/features/friendship/DiscoverPeople.tsx
+
 import { useState, useEffect, useMemo } from 'react';
 import { Search, UserPlus, Loader2, X, SlidersHorizontal, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
@@ -10,19 +11,26 @@ import { friendshipService } from './friendshipService';
 import { UserCard } from './UserCard';
 import { UserProfileModal } from './UserProfileModal';
 import { NotificationsPanel } from './NotificationsPanel';
-import { useNotifications } from '../../hooks/useNotifications';
-import type { SearchUser } from '../../modules/friendship';
-import { useOnlineUsers } from '../../context/OnlineUsersContext'; 
-import { useFriendshipContext } from '../../context/FriendshipContext'; 
+import { NotificationBadge } from './NotificationsBadge';
+import type { SearchUser, FriendshipStatusType } from '../../modules/friendship';
+import { useOnlineUsers } from '../../context/OnlineUsersContext';
+import { useFriendshipContext } from '../../context/FriendshipContext';
+import { useNotificationsContext } from '../../context/NotificationsContext';
+import { socketService } from '../../lib/socket'; // ✅ AÑADIR
+import { useAuth } from '../../hooks/useAuth'; // ✅ AÑADIR
 
+type SearchUserWithFriendship = SearchUser & {
+  status: FriendshipStatusType;
+  friendshipId: string | null;
+};
 
 export default function DiscoverPeople() {
-  const [allUsers, setAllUsers] = useState<SearchUser[]>([]);
+  const [allUsers, setAllUsers] = useState<SearchUserWithFriendship[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<SearchUserWithFriendship | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     city: '',
@@ -38,19 +46,20 @@ export default function DiscoverPeople() {
 
   const { success, error } = useToast();
   const { isUserOnline } = useOnlineUsers();
-  const { unreadCount } = useNotifications();
+  const { unreadCount } = useNotificationsContext();
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const { user } = useAuth(); // ✅ AÑADIR
 
   const USERS_PER_PAGE = 9;
 
-  const { friendshipUpdates } = useFriendshipContext();
-  
-  // ✅ ACTUALIZAR usuarios cuando cambia el contexto
+  const { friendshipUpdates, updateFriendship } = useFriendshipContext(); // ✅ AÑADIR updateFriendship
+
+  // ✅ Actualizar usuarios cuando cambia el contexto global
   useEffect(() => {
     setAllUsers(prev => prev.map(user => {
       const update = friendshipUpdates.get(user._id);
       if (update) {
-        console.log('🔄 [DiscoverPeople] Actualizando:', user.username, update.status);
+        console.log('🔄 [DiscoverPeople] Actualizando card desde contexto:', user.username, update.status);
         return {
           ...user,
           status: update.status,
@@ -60,6 +69,99 @@ export default function DiscoverPeople() {
       return user;
     }));
   }, [friendshipUpdates]);
+
+  // ✅ NUEVO: Escuchar sockets localmente para actualizar cards en tiempo real
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log('🔌 [DiscoverPeople] Configurando listeners de socket locales');
+
+    // ✅ Cuando RECIBO una solicitud
+    const handleFriendRequestReceived = (data: any) => {
+      console.log('📬 [DiscoverPeople Socket] Solicitud recibida de:', data.sender);
+      
+      const senderId = data.sender._id;
+      
+      // Actualizar card del remitente
+      setAllUsers(prev => prev.map(u => 
+        u._id === senderId 
+          ? { ...u, status: 'pending_received' as FriendshipStatusType, friendshipId: data.friendshipId }
+          : u
+      ));
+      
+      // Actualizar contexto global
+      updateFriendship(senderId, 'pending_received', data.friendshipId);
+      
+      console.log('✅ [DiscoverPeople] Card actualizada: usuario', data.sender.username, '→ pending_received');
+    };
+
+    // ✅ Cuando me ACEPTAN una solicitud
+    const handleFriendRequestAccepted = (data: any) => {
+      console.log('✅ [DiscoverPeople Socket] Solicitud aceptada por:', data.accepter);
+      
+      const accepterId = typeof data.accepter === 'string' ? data.accepter : data.accepter._id;
+      
+      // Actualizar card del que aceptó
+      setAllUsers(prev => prev.map(u => 
+        u._id === accepterId 
+          ? { ...u, status: 'friends' as FriendshipStatusType, friendshipId: data.friendshipId }
+          : u
+      ));
+      
+      // Actualizar contexto global
+      updateFriendship(accepterId, 'friends', data.friendshipId);
+      
+      console.log('✅ [DiscoverPeople] Card actualizada: ahora son amigos');
+    };
+
+    // ✅ Cuando me CANCELAN/RECHAZAN una solicitud
+    const handleFriendRequestCancelled = (data: any) => {
+      console.log('❌ [DiscoverPeople Socket] Solicitud cancelada por:', data.senderId);
+      
+      // Actualizar card del que canceló
+      setAllUsers(prev => prev.map(u => 
+        u._id === data.senderId 
+          ? { ...u, status: 'none' as FriendshipStatusType, friendshipId: null }
+          : u
+      ));
+      
+      // Actualizar contexto global
+      updateFriendship(data.senderId, 'none', null);
+      
+      console.log('✅ [DiscoverPeople] Card actualizada: solicitud cancelada');
+    };
+
+    // ✅ Cuando me ELIMINAN de amigos
+    const handleFriendRemoved = (data: any) => {
+      console.log('🗑️ [DiscoverPeople Socket] Amigo eliminado:', data.removedBy);
+      
+      const removerId = typeof data.removedBy === 'string' ? data.removedBy : data.removedBy._id;
+      
+      // Actualizar card del que eliminó
+      setAllUsers(prev => prev.map(u => 
+        u._id === removerId 
+          ? { ...u, status: 'none' as FriendshipStatusType, friendshipId: null }
+          : u
+      ));
+      
+      // Actualizar contexto global
+      updateFriendship(removerId, 'none', null);
+      
+      console.log('✅ [DiscoverPeople] Card actualizada: ya no son amigos');
+    };
+
+    // ✅ Registrar listeners
+    socketService.onFriendRequestReceived(handleFriendRequestReceived);
+    socketService.onFriendRequestAcceptedNotification(handleFriendRequestAccepted);
+    socketService.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
+    socketService.onFriendRemovedNotification(handleFriendRemoved);
+
+    // ✅ Cleanup
+    return () => {
+      console.log('🧹 [DiscoverPeople] Limpiando listeners de socket locales');
+      socketService.offFriendshipEvents();
+    };
+  }, [user?.id, updateFriendship]);
 
   useEffect(() => {
     loadFilterOptions();
@@ -78,7 +180,6 @@ export default function DiscoverPeople() {
     try {
       const options = await friendshipService.getFilterOptions();
       setFilterOptions(options);
-      console.log('✅ Opciones de filtros cargadas:', options);
     } catch (err) {
       console.error('❌ Error cargando opciones de filtros');
     }
@@ -86,16 +187,9 @@ export default function DiscoverPeople() {
 
   const loadUsers = async () => {
     try {
-      console.log(`🔄 Cargando usuarios con filtros:`, {
-        searchQuery,
-        city: filters.city,
-        interest: filters.interest,
-        gender: filters.gender
-      });
-      
       setLoading(true);
 
-      const fetchedUsers = await friendshipService.searchUsers(
+      const fetchedUsers: SearchUser[] = await friendshipService.searchUsers(
         searchQuery,
         1000,
         0,
@@ -105,10 +199,14 @@ export default function DiscoverPeople() {
         false
       );
 
-      console.log(`✅ Usuarios recibidos: ${fetchedUsers.length}`);
+      const mappedUsers: SearchUserWithFriendship[] = fetchedUsers.map(u => ({
+        ...u,
+        status: u.status ?? 'none',
+        friendshipId: u.friendshipId ?? null
+      }));
 
-      setAllUsers(fetchedUsers);
-      setTotalUsers(fetchedUsers.length);
+      setAllUsers(mappedUsers);
+      setTotalUsers(mappedUsers.length);
     } catch (err) {
       console.error('❌ Error loading users:', err);
       error('Error al cargar usuarios');
@@ -120,19 +218,10 @@ export default function DiscoverPeople() {
   };
 
   const filteredUsers = useMemo(() => {
-    console.log(`🔍 Filtrando usuarios. Total: ${allUsers.length}, onlineOnly: ${filters.onlineOnly}`);
-    
     let result = allUsers;
 
     if (filters.onlineOnly) {
-      result = result.filter(user => {
-        const online = isUserOnline(user._id);
-        if (online) {
-          console.log(`🟢 Usuario ${user.username} está ONLINE`);
-        }
-        return online;
-      });
-      console.log(`✅ Usuarios online encontrados: ${result.length}`);
+      result = result.filter(user => isUserOnline(user._id));
     }
 
     return result;
@@ -167,7 +256,7 @@ export default function DiscoverPeople() {
   return (
     <div className="h-full w-full bg-background">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header mejorado */}
+        {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1 text-left">
@@ -175,11 +264,10 @@ export default function DiscoverPeople() {
                 Descubre Nuevas Amistades
               </h1>
               <p className="text-muted-foreground text-lg mt-2">
-                Conecta con personas que comparten tus gustos musicales y sal de fiesta juntos 🎉
+                Conecta con personas que comparten tus gustos musicales 🎉
               </p>
             </div>
 
-            {/* Botón flotante de notificaciones */}
             <button
               onClick={() => setShowNotificationsPanel(true)}
               className="relative p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border border-primary/20 hover:border-primary/40 rounded-xl transition-all shadow-lg hover:shadow-xl"
@@ -187,14 +275,11 @@ export default function DiscoverPeople() {
             >
               <Bell className="w-6 h-6 text-primary" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-bold text-white bg-red-500 rounded-full border-2 border-background animate-pulse">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
+                <NotificationBadge count={unreadCount} />
               )}
             </button>
           </div>
 
-          {/* Info stats */}
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <span>👥 {filteredUsers.length} usuarios {filters.onlineOnly ? 'online' : 'disponibles'}</span>
             <span>•</span>
@@ -204,7 +289,7 @@ export default function DiscoverPeople() {
           </div>
         </div>
 
-        {/* Controles de búsqueda y filtros */}
+        {/* Búsqueda y filtros */}
         <div className="flex flex-col md:flex-row gap-4">
           <Card className="flex-1 border-border/50">
             <CardContent className="p-4">
@@ -219,7 +304,7 @@ export default function DiscoverPeople() {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -236,82 +321,62 @@ export default function DiscoverPeople() {
             <SlidersHorizontal className="w-4 h-4" />
             Filtros Avanzados
             {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="ml-1 bg-primary/20 text-primary">
+              <Badge variant="secondary" className="ml-1">
                 {activeFiltersCount}
               </Badge>
             )}
           </Button>
         </div>
 
-        {/* Panel de filtros expandible */}
+        {/* Panel de filtros */}
         {showFilters && (
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5 animate-in slide-in-from-top-2">
+          <Card className="border-primary/20">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">Filtros de Búsqueda</CardTitle>
-                  <CardDescription>
-                    Personaliza tu búsqueda para encontrar las personas perfectas
-                  </CardDescription>
-                </div>
+                <CardTitle>Filtros de Búsqueda</CardTitle>
                 {activeFiltersCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearFilters}
-                    className="text-primary hover:text-primary/80"
-                  >
-                    Limpiar todo ({activeFiltersCount})
+                  <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                    Limpiar ({activeFiltersCount})
                   </Button>
                 )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    📍 Ubicación
-                  </label>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">📍 Ciudad</label>
                   <select
                     value={filters.city}
                     onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all"
+                    className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Todas las ciudades</option>
+                    <option value="">Todas</option>
                     {filterOptions.cities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
+                      <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    🎵 Género Musical
-                  </label>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">🎵 Género Musical</label>
                   <select
                     value={filters.interest}
                     onChange={(e) => setFilters({ ...filters, interest: e.target.value })}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all"
+                    className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Todos los géneros</option>
+                    <option value="">Todos</option>
                     {filterOptions.interests.map((interest) => (
-                      <option key={interest} value={interest}>
-                        {interest}
-                      </option>
+                      <option key={interest} value={interest}>{interest}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    👤 Género
-                  </label>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">👤 Género</label>
                   <select
                     value={filters.gender}
                     onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all"
+                    className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
                   >
                     <option value="">Todos</option>
                     <option value="male">Masculino</option>
@@ -321,59 +386,37 @@ export default function DiscoverPeople() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-background/70 rounded-lg border border-primary/20 hover:border-primary/40 transition-colors">
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
                 <input
                   type="checkbox"
                   id="onlineOnly"
                   checked={filters.onlineOnly}
                   onChange={(e) => setFilters({ ...filters, onlineOnly: e.target.checked })}
-                  className="w-5 h-5 rounded border-input cursor-pointer accent-primary"
+                  className="w-4 h-4"
                 />
-                <label htmlFor="onlineOnly" className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Mostrar solo usuarios activos ahora
+                <label htmlFor="onlineOnly" className="text-sm cursor-pointer">
+                  Solo usuarios online
                 </label>
-                {filters.onlineOnly && (
-                  <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
-                    {filteredUsers.length} online
-                  </Badge>
-                )}
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Resultados */}
-        <Card className="border-border/50">
-          <CardHeader className="border-b border-border/50 bg-gradient-to-r from-background to-muted/20">
-            <div className="flex items-center justify-between">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between">
               <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  {searchQuery || activeFiltersCount > 0 ? (
-                    <>
-                      <Search className="w-5 h-5 text-primary" />
-                      Resultados de búsqueda
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-5 h-5 text-primary" />
-                      Usuarios Disponibles
-                    </>
-                  )}
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5" />
+                  Usuarios Disponibles
                 </CardTitle>
-                <CardDescription className="mt-1">
-                  {paginatedUsers.length > 0
-                    ? `Mostrando ${paginatedUsers.length} de ${filteredUsers.length} ${filters.onlineOnly ? 'usuarios online' : 'personas'}`
-                    : filters.onlineOnly
-                      ? 'No hay usuarios online con estos filtros'
-                      : 'No hay resultados para mostrar'}
+                <CardDescription>
+                  {paginatedUsers.length > 0 ? `Mostrando ${paginatedUsers.length} de ${filteredUsers.length}` : 'No hay resultados'}
                 </CardDescription>
               </div>
-              
-              {paginatedUsers.length > 0 && (
-                <Badge variant="outline" className="text-sm">
-                  Página {currentPage} de {totalPages}
-                </Badge>
+              {totalPages > 1 && (
+                <Badge variant="outline">Página {currentPage} de {totalPages}</Badge>
               )}
             </div>
           </CardHeader>
@@ -382,38 +425,14 @@ export default function DiscoverPeople() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground font-medium">
-                  Buscando personas increíbles...
-                </p>
+                <p className="text-muted-foreground">Buscando personas...</p>
               </div>
             ) : paginatedUsers.length === 0 ? (
-              <div className="text-center py-32">
-                <div className="mb-6">
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
-                    <UserPlus className="w-12 h-12 text-muted-foreground/50" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    {filters.onlineOnly 
-                      ? '😴 No hay usuarios online ahora mismo'
-                      : 'No encontramos personas con estas características'
-                    }
-                  </h3>
-                  <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                    {filters.onlineOnly
-                      ? 'Intenta desactivar el filtro de "solo online" o vuelve más tarde cuando más gente esté conectada'
-                      : searchQuery || activeFiltersCount > 0
-                        ? 'Intenta ajustar tus filtros de búsqueda o busca un término diferente'
-                        : 'Parece que no hay usuarios disponibles en este momento'}
-                  </p>
-                </div>
-                {(searchQuery || activeFiltersCount > 0) && (
-                  <Button
-                    onClick={handleClearFilters}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Limpiar todos los filtros
+              <div className="text-center py-20">
+                <p className="text-muted-foreground">No se encontraron usuarios</p>
+                {activeFiltersCount > 0 && (
+                  <Button onClick={handleClearFilters} variant="outline" className="mt-4">
+                    Limpiar filtros
                   </Button>
                 )}
               </div>
@@ -425,58 +444,31 @@ export default function DiscoverPeople() {
                       key={user._id}
                       user={user}
                       onViewProfile={() => setSelectedUser(user)}
-                      onStatusChange={(newStatus) => {
-                        setAllUsers((prev) =>
-                          prev.map((u) =>
-                            u._id === user._id ? { ...u, status: newStatus as any } : u
-                          )
-                        );
-                      }}
                     />
                   ))}
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                  <div className="flex justify-between items-center pt-6 border-t">
                     <p className="text-sm text-muted-foreground">
-                      Mostrando {((currentPage - 1) * USERS_PER_PAGE) + 1}-{Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length}
+                      {((currentPage - 1) * USERS_PER_PAGE) + 1}-{Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length}
                     </p>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        onClick={() => setCurrentPage(p => p - 1)}
                         disabled={!hasPrevPage}
-                        className="gap-2"
                       >
                         <ChevronLeft className="w-4 h-4" />
                         Anterior
                       </Button>
-
-                      <div className="hidden sm:flex items-center gap-1 mx-2">
-                        {[...Array(Math.min(5, totalPages))].map((_, idx) => {
-                          const pageNum = idx + 1;
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "ghost"}
-                              size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className="w-10"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
-                      </div>
-
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        onClick={() => setCurrentPage(p => p + 1)}
                         disabled={!hasNextPage}
-                        className="gap-2"
                       >
                         Siguiente
                         <ChevronRight className="w-4 h-4" />
@@ -490,13 +482,11 @@ export default function DiscoverPeople() {
         </Card>
       </div>
 
-      {/* Panel de notificaciones */}
       <NotificationsPanel 
         isOpen={showNotificationsPanel} 
         onClose={() => setShowNotificationsPanel(false)} 
       />
 
-      {/* Modal de perfil */}
       {selectedUser && (
         <UserProfileModal
           username={selectedUser.username}

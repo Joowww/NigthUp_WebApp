@@ -1,17 +1,23 @@
-// src/context/FriendshipContext.tsx (NUEVO ARCHIVO)
-
+// src/context/FriendshipContext.tsx
 import React, { createContext, useContext, useState, useCallback } from 'react';
+
+export type FriendshipStatusType = 
+  | 'none' 
+  | 'pending_sent'
+  | 'pending_received'
+  | 'friends'
+  | 'blocked';
 
 interface FriendshipUpdate {
   userId: string;
-  status: 'none' | 'pending_sent' | 'pending_received' | 'friends' | 'blocked';
+  status: FriendshipStatusType;
   friendshipId: string | null;
 }
 
 interface FriendshipContextType {
   friendshipUpdates: Map<string, FriendshipUpdate>;
-  updateFriendship: (userId: string, status: FriendshipUpdate['status'], friendshipId: string | null) => void;
-  getFriendshipStatus: (userId: string) => FriendshipUpdate | undefined;
+  updateFriendship: (userId: string, status: FriendshipStatusType, friendshipId: string | null) => void;
+  getFriendshipStatus: (userId: string, fallbackStatus?: FriendshipStatusType) => FriendshipUpdate;
 }
 
 const FriendshipContext = createContext<FriendshipContextType | undefined>(undefined);
@@ -19,7 +25,11 @@ const FriendshipContext = createContext<FriendshipContextType | undefined>(undef
 export function FriendshipProvider({ children }: { children: React.ReactNode }) {
   const [friendshipUpdates, setFriendshipUpdates] = useState(new Map<string, FriendshipUpdate>());
 
-  const updateFriendship = useCallback((userId: string, status: FriendshipUpdate['status'], friendshipId: string | null) => {
+  /**
+   * Actualiza el estado de amistad de un usuario en la app.
+   * Este contexto actúa como fuente reactiva para sobreescribir el backend en la UI.
+   */
+  const updateFriendship = useCallback((userId: string, status: FriendshipStatusType, friendshipId: string | null) => {
     setFriendshipUpdates(prev => {
       const newMap = new Map(prev);
       newMap.set(userId, { userId, status, friendshipId });
@@ -28,8 +38,11 @@ export function FriendshipProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const getFriendshipStatus = useCallback((userId: string) => {
-    return friendshipUpdates.get(userId);
+
+  const getFriendshipStatus = useCallback((userId: string, fallbackStatus: FriendshipStatusType = 'none'): FriendshipUpdate => {
+    const update = friendshipUpdates.get(userId);
+    if (update) return update;
+    return { userId, status: fallbackStatus, friendshipId: null };
   }, [friendshipUpdates]);
 
   return (

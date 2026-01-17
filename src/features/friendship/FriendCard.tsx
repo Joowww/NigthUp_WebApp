@@ -6,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { OnlineStatusBadge } from '../OnlineStatusBadge';
 import { getAvatarUrl, getFullName } from '../../modules/friendship';
 import type { PublicUser } from '../../modules/friendship';
+import { FriendshipButton } from './FriendshipButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +14,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
+import type { PublicUserWithFriendship } from '../../modules/friendship';
+
 
 interface FriendCardProps {
-  friend: PublicUser;
-  onViewProfile: () => void;
-  onSendMessage: () => void;
-  onRemove: () => void;
-}
+    friend: PublicUserWithFriendship;
+    onViewProfile: () => void;
+    onSendMessage: () => void;
+    onRemove: () => void;
+  }
 
 export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: FriendCardProps) {
   const fullName = getFullName(friend);
@@ -105,8 +108,17 @@ export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: F
           </p>
         )}
 
-        {/* Acciones rápidas */}
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+        {/* Botón de amistad y acciones rápidas */}
+        <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          {/* ✅ FriendshipButton maneja agregar/aceptar/rechazar */}
+          <FriendshipButton
+            userId={friend._id}
+            friendshipId={friend.friendshipId ?? null}
+            status={friend.status ?? 'none'}
+            fullWidth
+          />
+
+          {/* Botón enviar mensaje siempre disponible */}
           <Button
             onClick={onSendMessage}
             size="sm"
@@ -116,15 +128,18 @@ export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: F
             Mensaje
           </Button>
 
-          <Button
-            onClick={onRemove}
-            variant="outline"
-            size="sm"
-            className="gap-2 hover:bg-destructive/10 hover:text-destructive"
-            title="Eliminar amigo"
-          >
-            <UserMinus className="w-4 h-4" />
-          </Button>
+          {/* Botón eliminar amigo solo si ya son amigos */}
+          {friend.status === 'friends' && (
+            <Button
+              onClick={onRemove}
+              variant="outline"
+              size="sm"
+              className="gap-2 hover:bg-destructive/10 hover:text-destructive"
+              title="Eliminar amigo"
+            >
+              <UserMinus className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

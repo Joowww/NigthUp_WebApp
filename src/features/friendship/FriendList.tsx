@@ -7,27 +7,23 @@ import { Badge } from '../../ui/badge';
 import { FriendCard } from './FriendCard';
 import { FriendProfileModal } from './FriendProfileModal';
 import { friendshipService } from './friendshipService';
-import { getFullName } from '../../modules/friendship';
-import type { PublicUser } from '../../modules/friendship';
+import { getFullName, type PublicUserWithFriendship, type FriendshipStatusType } from '../../modules/friendship';
 import { useNavigate } from 'react-router-dom';
 import { useOnlineUsers } from '../../context/OnlineUsersContext';
 import { useAuth } from '../../hooks/useAuth';
-import { socketService } from '../../lib/socket'; 
-import { useFriendshipContext } from '../../context/FriendshipContext'; 
-
-
+import { socketService } from '../../lib/socket';
+import { useFriendshipContext } from '../../context/FriendshipContext';
 
 export function FriendsList() {
-    const [friends, setFriends] = useState<PublicUser[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedFriend, setSelectedFriend] = useState<PublicUser | null>(null);
-    const [showOnlineOnly, setShowOnlineOnly] = useState(false);
-    const navigate = useNavigate();
-    const { isUserOnline } = useOnlineUsers();
-    const { updateFriendship } = useFriendshipContext(); // ✅ AÑADIR
-    const { user } = useAuth(); // ✅ AÑADIR
-
+  const [friends, setFriends] = useState<PublicUserWithFriendship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFriend, setSelectedFriend] = useState<PublicUserWithFriendship | null>(null);
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const navigate = useNavigate();
+  const { isUserOnline } = useOnlineUsers();
+  const { updateFriendship } = useFriendshipContext();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadFriends();
@@ -36,9 +32,17 @@ export function FriendsList() {
   const loadFriends = async () => {
     try {
       setLoading(true);
-      const friendsList = await friendshipService.getFriendsV2();
-      console.log('📋 [FriendsList] Amigos cargados:', friendsList);
-      setFriends(friendsList); // ✅ SOLO ACTUALIZAR friends, NO filteredFriends
+      const friendsList: PublicUserWithFriendship[] = await friendshipService.getFriendsV2();
+
+      // ✅ Asegurarse de que todos los objetos tengan status y friendshipId
+      const mappedFriends = friendsList.map(f => ({
+        ...f,
+        status: f.status ?? 'friends', // todos los que vienen de friendsList se consideran amigos
+        friendshipId: f.friendshipId ?? null,
+      }));
+
+      console.log('📋 [FriendsList] Amigos cargados:', mappedFriends);
+      setFriends(mappedFriends);
     } catch (err) {
       console.error('❌ Error cargando amigos:', err);
     } finally {
@@ -46,11 +50,9 @@ export function FriendsList() {
     }
   };
 
-  // Filtrado inteligente
   const filteredFriends = useMemo(() => {
     let result = friends;
 
-    // Filtro de búsqueda
     if (searchQuery.trim()) {
       result = result.filter(friend =>
         friend.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -59,7 +61,6 @@ export function FriendsList() {
       );
     }
 
-    // Filtro de online
     if (showOnlineOnly) {
       result = result.filter(friend => isUserOnline(friend._id));
     }
@@ -69,31 +70,26 @@ export function FriendsList() {
 
   const onlineCount = friends.filter(f => isUserOnline(f._id)).length;
 
-  const handleSendMessage = (friend: PublicUser) => {
+  const handleSendMessage = (friend: PublicUserWithFriendship) => {
     navigate('/chat', { state: { startChatWith: friend._id } });
   };
 
-  const handleRemoveFriend = async (friend: PublicUser) => {
+  const handleRemoveFriend = async (friend: PublicUserWithFriendship) => {
     if (!confirm(`¿Eliminar a ${getFullName(friend)} de tus amigos?`)) return;
 
     try {
       if (friend.friendshipId) {
         console.log('🗑️ [FriendsList] Eliminando amigo:', friend.username, friend.friendshipId);
-        
-        // ✅ ELIMINAR EN BACKEND
         await friendshipService.removeFriend(friend.friendshipId);
-        
-        // ✅ ACTUALIZAR CONTEXTO LOCAL
+
         updateFriendship(friend._id, 'none', null);
-        
-        // ✅ EMITIR SOCKET AL OTRO USUARIO
+
         if (user?.id) {
           socketService.emitFriendRemoved(friend._id, friend.friendshipId, user.id);
         }
-        
-        // ✅ ACTUALIZAR LISTA LOCAL
+
         setFriends(prev => prev.filter(f => f._id !== friend._id));
-        
+
         console.log('✅ [FriendsList] Amigo eliminado correctamente');
       }
     } catch (err) {
@@ -141,19 +137,11 @@ export function FriendsList() {
             <Badge variant="outline">{filteredFriends.length}</Badge>
           </h3>
           <p className="text-muted-foreground text-sm mt-1">
-            {onlineCount > 0 && (
-              <span className="text-green-500">
-                🟢 {onlineCount} online
-              </span>
-            )}
+            {onlineCount > 0 && <span className="text-green-500">🟢 {onlineCount} online</span>}
           </p>
         </div>
 
-        <Button
-          onClick={() => navigate('/friendship')}
-          variant="outline"
-          className="gap-2"
-        >
+        <Button onClick={() => navigate('/friendship')} variant="outline" className="gap-2">
           <Users className="w-4 h-4" />
           Descubrir más personas
         </Button>
@@ -180,11 +168,15 @@ export function FriendsList() {
         </div>
 
         <Button
-          variant={showOnlineOnly ? "default" : "outline"}
+          variant={showOnlineOnly ? 'default' : 'outline'}
           onClick={() => setShowOnlineOnly(!showOnlineOnly)}
           className="gap-2"
         >
-          <div className={`w-2 h-2 rounded-full ${showOnlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'}`} />
+          <div
+            className={`w-2 h-2 rounded-full ${
+              showOnlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'
+            }`}
+          />
           Solo online
         </Button>
       </div>
@@ -193,7 +185,6 @@ export function FriendsList() {
       {filteredFriends.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredFriends.map((friend) => {
-            // ✅ VALIDAR antes de renderizar
             if (!friend || !friend.username) {
               console.warn('⚠️ Amigo sin username:', friend);
               return null;
