@@ -54,6 +54,7 @@ export interface PublicUser {
   isOnline?: boolean;
   lastSeen?: Date;
   events?: PublicEvent[];
+  friendshipId?: string | null; 
 }
 
 export interface PublicEvent {

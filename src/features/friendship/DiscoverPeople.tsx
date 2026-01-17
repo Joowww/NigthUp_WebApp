@@ -1,6 +1,6 @@
 // src/features/friendship/DiscoverPeople.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, UserPlus, Loader2, X, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, UserPlus, Loader2, X, SlidersHorizontal, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
@@ -9,11 +9,13 @@ import { useToast } from '../../hooks/useToast';
 import { friendshipService } from './friendshipService';
 import { UserCard } from './UserCard';
 import { UserProfileModal } from './UserProfileModal';
+import { NotificationsPanel } from './NotificationsPanel';
+import { useNotifications } from '../../hooks/useNotifications';
 import type { SearchUser } from '../../modules/friendship';
-import { useOnlineUsers } from '../../context/OnlineUsersContext'; // ✅ IMPORTAR
+import { useOnlineUsers } from '../../context/OnlineUsersContext'; 
 
 export default function DiscoverPeople() {
-  const [allUsers, setAllUsers] = useState<SearchUser[]>([]); // ✅ Todos los usuarios cargados
+  const [allUsers, setAllUsers] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,16 +35,16 @@ export default function DiscoverPeople() {
   }>({ cities: [], interests: [] });
 
   const { success, error } = useToast();
-  const { isUserOnline } = useOnlineUsers(); // ✅ Hook de usuarios online
+  const { isUserOnline } = useOnlineUsers();
+  const { unreadCount } = useNotifications();
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
 
   const USERS_PER_PAGE = 9;
 
-  // Cargar opciones de filtros
   useEffect(() => {
     loadFilterOptions();
   }, []);
 
-  // Cargar usuarios cuando cambien filtros (excepto onlineOnly)
   useEffect(() => {
     const timeout = setTimeout(() => {
       setCurrentPage(1);
@@ -73,15 +75,14 @@ export default function DiscoverPeople() {
       
       setLoading(true);
 
-      // ✅ Cargar TODOS los usuarios sin paginación (o con límite alto)
       const fetchedUsers = await friendshipService.searchUsers(
         searchQuery,
-        1000, // ✅ Cargar muchos usuarios para filtrar localmente
+        1000,
         0,
         filters.city,
         filters.interest,
         filters.gender,
-        false // ✅ NO filtrar por online en backend
+        false
       );
 
       console.log(`✅ Usuarios recibidos: ${fetchedUsers.length}`);
@@ -98,13 +99,11 @@ export default function DiscoverPeople() {
     }
   };
 
-  // ✅ Filtrar usuarios online en FRONTEND
   const filteredUsers = useMemo(() => {
     console.log(`🔍 Filtrando usuarios. Total: ${allUsers.length}, onlineOnly: ${filters.onlineOnly}`);
     
     let result = allUsers;
 
-    // Filtrar solo usuarios online si está activo el checkbox
     if (filters.onlineOnly) {
       result = result.filter(user => {
         const online = isUserOnline(user._id);
@@ -119,33 +118,15 @@ export default function DiscoverPeople() {
     return result;
   }, [allUsers, filters.onlineOnly, isUserOnline]);
 
-  // ✅ Paginación local
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * USERS_PER_PAGE;
     const endIndex = startIndex + USERS_PER_PAGE;
     return filteredUsers.slice(startIndex, endIndex);
   }, [filteredUsers, currentPage]);
 
-  // Reset página cuando cambie onlineOnly
   useEffect(() => {
     setCurrentPage(1);
   }, [filters.onlineOnly]);
-
-  const handleSendRequest = async (userId: string) => {
-    try {
-      await friendshipService.sendFriendRequest(userId);
-      success('¡Solicitud enviada! 🎉');
-
-      setAllUsers((prev) =>
-        prev.map((user) =>
-          user._id === userId ? { ...user, status: 'pending_sent' as any } : user
-        )
-      );
-    } catch (err) {
-      console.error('❌ Error sending request:', err);
-      error('No se pudo enviar la solicitud');
-    }
-  };
 
   const handleClearFilters = () => {
     setFilters({
@@ -167,13 +148,33 @@ export default function DiscoverPeople() {
     <div className="h-full w-full bg-background">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Header mejorado */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-purple-500 to-secondary bg-clip-text text-transparent">
-            Descubre Nuevas Amistades
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Conecta con personas que comparten tus gustos musicales y sal de fiesta juntos 🎉
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1 text-left">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-purple-500 to-secondary bg-clip-text text-transparent">
+                Descubre Nuevas Amistades
+              </h1>
+              <p className="text-muted-foreground text-lg mt-2">
+                Conecta con personas que comparten tus gustos musicales y sal de fiesta juntos 🎉
+              </p>
+            </div>
+
+            {/* Botón flotante de notificaciones */}
+            <button
+              onClick={() => setShowNotificationsPanel(true)}
+              className="relative p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border border-primary/20 hover:border-primary/40 rounded-xl transition-all shadow-lg hover:shadow-xl"
+              title="Ver notificaciones de amistad"
+            >
+              <Bell className="w-6 h-6 text-primary" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-bold text-white bg-red-500 rounded-full border-2 border-background animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Info stats */}
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <span>👥 {filteredUsers.length} usuarios {filters.onlineOnly ? 'online' : 'disponibles'}</span>
             <span>•</span>
@@ -185,7 +186,6 @@ export default function DiscoverPeople() {
 
         {/* Controles de búsqueda y filtros */}
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Barra de búsqueda */}
           <Card className="flex-1 border-border/50">
             <CardContent className="p-4">
               <div className="relative">
@@ -208,7 +208,6 @@ export default function DiscoverPeople() {
             </CardContent>
           </Card>
 
-          {/* Botón de filtros */}
           <Button
             variant={showFilters ? "default" : "outline"}
             onClick={() => setShowFilters(!showFilters)}
@@ -249,7 +248,6 @@ export default function DiscoverPeople() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-3 gap-4">
-                {/* Filtro por ciudad */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-2">
                     📍 Ubicación
@@ -268,7 +266,6 @@ export default function DiscoverPeople() {
                   </select>
                 </div>
 
-                {/* Filtro por interés */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-2">
                     🎵 Género Musical
@@ -287,7 +284,6 @@ export default function DiscoverPeople() {
                   </select>
                 </div>
 
-                {/* Filtro por género */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-2">
                     👤 Género
@@ -305,7 +301,6 @@ export default function DiscoverPeople() {
                 </div>
               </div>
 
-              {/* Filtro solo online - MEJORADO */}
               <div className="flex items-center gap-3 p-4 bg-background/70 rounded-lg border border-primary/20 hover:border-primary/40 transition-colors">
                 <input
                   type="checkbox"
@@ -404,20 +399,23 @@ export default function DiscoverPeople() {
               </div>
             ) : (
               <>
-                {/* Grid de usuarios */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {paginatedUsers.map((user) => (
                     <UserCard
                       key={user._id}
                       user={user}
                       onViewProfile={() => setSelectedUser(user)}
-                      onSendRequest={() => handleSendRequest(user._id)}
-                      friendshipStatus={user.status as any}
+                      onStatusChange={(newStatus) => {
+                        setAllUsers((prev) =>
+                          prev.map((u) =>
+                            u._id === user._id ? { ...u, status: newStatus as any } : u
+                          )
+                        );
+                      }}
                     />
                   ))}
                 </div>
 
-                {/* Paginación */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between pt-6 border-t border-border/50">
                     <p className="text-sm text-muted-foreground">
@@ -472,13 +470,18 @@ export default function DiscoverPeople() {
         </Card>
       </div>
 
+      {/* Panel de notificaciones */}
+      <NotificationsPanel 
+        isOpen={showNotificationsPanel} 
+        onClose={() => setShowNotificationsPanel(false)} 
+      />
+
       {/* Modal de perfil */}
       {selectedUser && (
         <UserProfileModal
           username={selectedUser.username}
           isOpen={!!selectedUser}
           onClose={() => setSelectedUser(null)}
-          onSendRequest={handleSendRequest}
         />
       )}
     </div>

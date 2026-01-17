@@ -187,6 +187,97 @@ class SocketService {
   isConnected(): boolean {
     return this.socket?.connected || false;
   }
+  // ============================================
+  // FRIENDSHIP EVENTS (NUEVO)
+  // ============================================
+
+  /**
+   * Emitir solicitud enviada
+   */
+  emitFriendRequestSent(recipientId: string, senderId: string, friendshipId: string) {
+    this.socket?.emit('friendRequestSent', {
+      recipientId,
+      senderId,
+      friendshipId
+    });
+    console.log('📤 [Socket] Emitido friendRequestSent:', { recipientId, friendshipId });
+  }
+
+  /**
+   * Emitir solicitud aceptada
+   */
+  emitFriendRequestAccepted(requesterId: string, accepterId: string, friendshipId: string) {
+    this.socket?.emit('friendRequestAccepted', {
+      requesterId,
+      accepterId,
+      friendshipId
+    });
+    console.log('✅ [Socket] Emitido friendRequestAccepted:', { requesterId, friendshipId });
+  }
+
+  /**
+   * Emitir solicitud cancelada
+   */
+  emitFriendRequestCancelled(recipientId: string, friendshipId: string) {
+    this.socket?.emit('friendRequestCancelled', {
+      recipientId,
+      friendshipId
+    });
+    console.log('❌ [Socket] Emitido friendRequestCancelled:', { recipientId, friendshipId });
+  }
+
+  /**
+   * Escuchar solicitud recibida
+   */
+  onFriendRequestReceived(cb: (data: {
+    friendshipId: string;
+    sender: {
+      _id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+      avatar?: string;
+    };
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRequestReceived', cb);
+  }
+
+  /**
+   * Escuchar solicitud aceptada
+   */
+  onFriendRequestAcceptedNotification(cb: (data: {
+    friendshipId: string;
+    accepter: {
+      _id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+      avatar?: string;
+    };
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRequestAcceptedNotification', cb);
+  }
+
+  /**
+   * Escuchar solicitud cancelada
+   */
+  onFriendRequestCancelledNotification(cb: (data: {
+    friendshipId: string;
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRequestCancelledNotification', cb);
+  }
+
+  /**
+   * Dejar de escuchar eventos de amistad
+   */
+  offFriendshipEvents() {
+    this.socket?.off('friendRequestReceived');
+    this.socket?.off('friendRequestAcceptedNotification');
+    this.socket?.off('friendRequestCancelledNotification');
+  }
 }
 
 export const socketService = new SocketService();

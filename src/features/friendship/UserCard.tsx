@@ -1,89 +1,30 @@
 // src/features/friendship/UserCard.tsx
-import React from 'react';
-import { MapPin, Music, UserPlus, MessageCircle, Check, Clock, Ban } from 'lucide-react';
+import { MapPin, Music } from 'lucide-react';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { OnlineStatusBadge } from '../../features/OnlineStatusBadge';
-import type { PublicUser } from '../../modules/friendship';
+import { FriendshipButton } from './FriendshipButton';
+import { MutualFriends } from './MutualFriends';
+import type { SearchUser } from '../../modules/friendship';
 import { getFullName, getAvatarUrl } from '../../modules/friendship';
 
 interface UserCardProps {
-  user: PublicUser;
+  user: SearchUser;
   onViewProfile: () => void;
-  onSendRequest: () => void;
-  friendshipStatus?: 'none' | 'pending' | 'accepted' | 'blocked';
+  onStatusChange?: (newStatus: string) => void;
 }
 
 export function UserCard({ 
   user, 
-  onViewProfile, 
-  onSendRequest,
-  friendshipStatus = 'none'
+  onViewProfile,
+  onStatusChange
 }: UserCardProps) {
   
   const fullName = getFullName(user);
   const avatarUrl = getAvatarUrl(user);
   const location = user.city || user.comunidad || 'Ubicación no especificada';
-
-  // Determinar el estado del botón
-  const getActionButton = () => {
-    switch (friendshipStatus) {
-      case 'accepted':
-        return (
-          <Button
-            disabled
-            size="sm"
-            className="w-full gap-2 bg-green-500/20 text-green-500 cursor-not-allowed"
-          >
-            <Check className="w-4 h-4" />
-            Amigos
-          </Button>
-        );
-      
-      case 'pending':
-        return (
-          <Button
-            disabled
-            size="sm"
-            variant="outline"
-            className="w-full gap-2 cursor-not-allowed"
-          >
-            <Clock className="w-4 h-4" />
-            Solicitud enviada
-          </Button>
-        );
-      
-      case 'blocked':
-        return (
-          <Button
-            disabled
-            size="sm"
-            variant="destructive"
-            className="w-full gap-2 cursor-not-allowed opacity-50"
-          >
-            <Ban className="w-4 h-4" />
-            Bloqueado
-          </Button>
-        );
-      
-      default:
-        return (
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSendRequest();
-            }}
-            size="sm"
-            className="w-full gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-          >
-            <UserPlus className="w-4 h-4" />
-            Agregar amigo
-          </Button>
-        );
-    }
-  };
 
   return (
     <Card 
@@ -140,6 +81,15 @@ export function UserCard({
           </div>
         </div>
 
+        {/* Amigos en común */}
+        <div className="px-6 pb-3">
+          <MutualFriends 
+            userId={user._id} 
+            limit={3}
+            showAvatars={true}
+          />
+        </div>
+
         {/* Intereses musicales */}
         {user.intereses && user.intereses.length > 0 && (
           <div className="px-6 pb-4">
@@ -167,14 +117,18 @@ export function UserCard({
         )}
 
         {/* Acciones */}
-        <div className="p-4 pt-0 space-y-2">
-          {getActionButton()}
+        <div className="p-4 pt-0 space-y-2" onClick={(e) => e.stopPropagation()}>
+          <FriendshipButton
+            userId={user._id}
+            friendshipId={user.friendshipId}
+            status={user.status as any}
+            onStatusChange={onStatusChange}
+            size="sm"
+            fullWidth={true}
+          />
           
           <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewProfile();
-            }}
+            onClick={onViewProfile}
             variant="outline"
             size="sm"
             className="w-full gap-2"

@@ -1,4 +1,4 @@
-// src/features/friendship/UserProfileModal.tsx
+// src/features/friendship/FriendProfileModal.tsx (NUEVO ARCHIVO)
 import { useState, useEffect } from 'react';
 import { 
   X, 
@@ -6,6 +6,7 @@ import {
   Music, 
   Calendar, 
   MessageCircle,
+  UserMinus,
   Loader2,
   Globe,
   Instagram,
@@ -24,75 +25,64 @@ import { Badge } from '../../ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { ScrollArea } from '../../ui/scroll-area';
 import { Separator } from '../../ui/separator';
-import { OnlineStatusBadge } from '../../features/OnlineStatusBadge';
-import { FriendshipButton } from './FriendshipButton';
+import { OnlineStatusBadge } from '../OnlineStatusBadge';
 import { MutualFriends } from './MutualFriends';
-import { useToast } from '../../hooks/useToast';
-import { useNavigate } from 'react-router-dom';
 import { friendshipService } from './friendshipService';
 import { getFullName, getAvatarUrl } from '../../modules/friendship';
+import type { PublicUser } from '../../modules/friendship';
 
-interface UserProfileModalProps {
-  username: string;
+interface FriendProfileModalProps {
+  friend: PublicUser;
   isOpen: boolean;
   onClose: () => void;
+  onSendMessage: () => void;
+  onRemove: () => void;
 }
 
-export function UserProfileModal({ 
-  username, 
+export function FriendProfileModal({ 
+  friend, 
   isOpen, 
-  onClose
-}: UserProfileModalProps) {
+  onClose,
+  onSendMessage,
+  onRemove
+}: FriendProfileModalProps) {
   
-  const [profile, setProfile] = useState<any>(null);
+  const [fullProfile, setFullProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { error } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isOpen && username) {
-      console.log('🔍 [UserProfileModal] Cargando perfil de:', username);
-      loadProfile();
+    if (isOpen && friend.username) {
+      loadFullProfile();
     }
-  }, [isOpen, username]);
+  }, [isOpen, friend.username]);
 
-  const loadProfile = async () => {
+  const loadFullProfile = async () => {
     try {
       setLoading(true);
-      console.log('🌐 [UserProfileModal] Llamando a getPublicProfile...');
-      const data = await friendshipService.getPublicProfile(username);
-      console.log('✅ [UserProfileModal] Perfil cargado:', data);
+      const data = await friendshipService.getPublicProfile(friend.username);
       
-      // Adaptador: Si viene el usuario directamente
+      // Adaptador
       if ('_id' in data && !('user' in data)) {
-        setProfile({
-          user: data,
-          friendshipStatus: 'none',
-          friendshipId: null,
-          canMessage: false
-        });
+        setFullProfile(data);
       } else {
-        setProfile(data);
+        setFullProfile((data as any).user);
       }
     } catch (err) {
-      console.error('❌ [UserProfileModal] Error loading profile:', err);
-      error('Error al cargar el perfil');
-      onClose();
+      console.error('❌ Error loading profile:', err);
+      setFullProfile(friend); // Usar datos básicos si falla
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendMessage = () => {
-    if (!profile?.user) return;
-    console.log('💬 [UserProfileModal] Abriendo chat con:', profile.user._id);
-    navigate('/chat', { state: { startChatWith: profile.user._id } });
+  const handleRemoveFriend = () => {
+    onRemove();
     onClose();
   };
 
-  const user = profile?.user;
-  const fullName = user ? getFullName(user) : '';
-  const avatarUrl = user ? getAvatarUrl(user) : '';
+  const user = fullProfile || friend;
+  const fullName = getFullName(user);
+  const avatarUrl = getAvatarUrl(user);
   const coverUrl = user?.coverPhoto?.startsWith('http') 
     ? user.coverPhoto
     : user?.coverPhoto
@@ -103,17 +93,15 @@ export function UserProfileModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[95vh] p-0 overflow-hidden bg-background border-border/50 shadow-2xl">
         <DialogHeader className="sr-only">
-          <DialogTitle>{fullName || username}</DialogTitle>
-          <DialogDescription>
-            Perfil de {fullName || username}
-          </DialogDescription>
+          <DialogTitle>{fullName}</DialogTitle>
+          <DialogDescription>Perfil de {fullName}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center justify-center h-96">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
           </div>
-        ) : user ? (
+        ) : (
           <ScrollArea className="h-[95vh]">
             {/* Cover Photo */}
             <div className="relative">
@@ -161,33 +149,26 @@ export function UserProfileModal({
                 <p className="text-lg text-muted-foreground">@{user.username}</p>
               </div>
 
-              {/* Botones de acción con FriendshipButton */}
+              {/* Botones de acción */}
               <div className="flex gap-3 mb-6">
-                <FriendshipButton
-                  userId={user._id}
-                  friendshipId={profile.friendshipId}
-                  status={profile.friendshipStatus as any}
-                  onStatusChange={(newStatus) => {
-                    setProfile({
-                      ...profile,
-                      friendshipStatus: newStatus
-                    });
-                  }}
+                <Button
+                  onClick={onSendMessage}
+                  className="flex-1 gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
                   size="lg"
-                  fullWidth={true}
-                />
-                
-                {profile.friendshipStatus === 'friends' && (
-                  <Button
-                    onClick={handleSendMessage}
-                    variant="outline"
-                    size="lg"
-                    className="gap-2 flex-shrink-0"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Mensaje
-                  </Button>
-                )}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Enviar mensaje
+                </Button>
+
+                <Button
+                  onClick={handleRemoveFriend}
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <UserMinus className="w-5 h-5" />
+                  Eliminar amigo
+                </Button>
               </div>
 
               {/* Amigos en común */}
@@ -382,10 +363,6 @@ export function UserProfileModal({
               )}
             </div>
           </ScrollArea>
-        ) : (
-          <div className="flex items-center justify-center h-96">
-            <p className="text-muted-foreground">No se pudo cargar el perfil</p>
-          </div>
         )}
       </DialogContent>
     </Dialog>

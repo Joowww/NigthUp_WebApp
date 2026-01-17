@@ -24,6 +24,7 @@ import { Toast } from '../../ui/toast';
 import { trustService } from './TrustService';
 import type { UserTrustStats } from '../../modules/userTrust';
 import { getTrustLevelColor, getTrustLevelIcon } from '../../modules/userTrust';
+import { FriendsList } from '../friendship/FriendList';
 
 export function MyProfile() {
   const { t } = useTranslation();
@@ -570,27 +571,32 @@ const handleAvatarUpload = async (file: File) => {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="mt-8">
-        <TabsList className="grid w-full grid-cols-5 bg-card/50 backdrop-blur-xl border border-border/30">        <TabsTrigger value="info" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white transition-all">
-            <User className="w-4 h-4 mr-2" />
-            Información
-        </TabsTrigger>
-        <TabsTrigger value="interests" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-secondary data-[state=active]:to-secondary/80 data-[state=active]:text-white transition-all">
-            <Heart className="w-4 h-4 mr-2" />
-            Intereses
-        </TabsTrigger>
-        <TabsTrigger value="security" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">
-            <Lock className="w-4 h-4 mr-2" />
-            Seguridad
-        </TabsTrigger>
-        <TabsTrigger value="reputation" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white transition-all">
-         <Star className="w-4 h-4 mr-2" />
-             Reputación
-        </TabsTrigger>
-        <TabsTrigger value="events" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent data-[state=active]:to-accent/80 data-[state=active]:text-white transition-all">
-            <Music className="w-4 h-4 mr-2" />
-            Eventos
-        </TabsTrigger>
-        </TabsList>
+          <TabsList className="grid w-full grid-cols-6 bg-card/50 backdrop-blur-xl border border-border/30">
+            <TabsTrigger value="info" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white transition-all">
+              <User className="w-4 h-4 mr-2" />
+              Información
+            </TabsTrigger>
+            <TabsTrigger value="interests" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-secondary data-[state=active]:to-secondary/80 data-[state=active]:text-white transition-all">
+              <Heart className="w-4 h-4 mr-2" />
+              Intereses
+            </TabsTrigger>
+            <TabsTrigger value="friends" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white transition-all">
+              <Users className="w-4 h-4 mr-2" />
+              Amigos
+            </TabsTrigger>
+            <TabsTrigger value="security" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-orange-500 data-[state=active]:text-white transition-all">
+              <Lock className="w-4 h-4 mr-2" />
+              Seguridad
+            </TabsTrigger>
+            <TabsTrigger value="reputation" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white transition-all">
+              <Star className="w-4 h-4 mr-2" />
+              Reputación
+            </TabsTrigger>
+            <TabsTrigger value="events" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent data-[state=active]:to-accent/80 data-[state=active]:text-white transition-all">
+              <Music className="w-4 h-4 mr-2" />
+              Eventos
+            </TabsTrigger>
+          </TabsList>
 
           {/* Tab Content - Información (con vista compacta y expandida) */}
         <TabsContent value="info" className="mt-6 space-y-4">
@@ -1023,6 +1029,15 @@ const handleAvatarUpload = async (file: File) => {
               </CardContent>
             </Card>
           </TabsContent>
+          
+            {/* Tab Content - Amigos */}
+          <TabsContent value="friends" className="mt-6">
+            <Card className="backdrop-blur-xl bg-gradient-to-br from-card/80 via-card/60 to-card/40 border border-purple-500/20 shadow-xl">
+              <CardContent className="p-6">
+                <FriendsList />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
                {/* Tab Content - Seguridad */}
         <TabsContent value="security" className="mt-6">
@@ -1412,59 +1427,57 @@ const handleAvatarUpload = async (file: File) => {
 
             {/* Modales de imágenes */}
             <ImageUploadModal
-            isOpen={showAvatarModal}
-            onClose={() => setShowAvatarModal(false)}
-            onUpload={handleAvatarUpload}
-            currentImage={avatarUrl}
-            title="Cambiar Avatar"
-            type="avatar"
-        />
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        onUpload={handleAvatarUpload}
+        currentImage={avatarUrl}
+        title="Cambiar Avatar"
+        type="avatar"
+      />
 
-        <ImageUploadModal
-            isOpen={showCoverModal}
-            onClose={() => setShowCoverModal(false)}
-            onUpload={handleCoverPhotoUpload}
-            currentImage={coverUrl}
-            title="Cambiar Foto de Portada"
-            type="cover"
-        />
+      <ImageUploadModal
+        isOpen={showCoverModal}
+        onClose={() => setShowCoverModal(false)}
+        onUpload={handleCoverPhotoUpload}
+        currentImage={coverUrl}
+        title="Cambiar Foto de Portada"
+        type="cover"
+      />
 
-        {/* Modales de seguridad */}
-        <ChangePasswordModal
-            isOpen={showPasswordModal}
-            onClose={() => setShowPasswordModal(false)}
-            onSuccess={success}
-            onError={error}
-            onChangePassword={handleChangePassword}
-        />
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={success}
+        onError={error}
+        onChangePassword={handleChangePassword}
+      />
 
-        <ChangeEmailModal
-            isOpen={showEmailModal}
-            onClose={() => setShowEmailModal(false)}
-            currentEmail={profile.email}
-            onSuccess={success}
-            onError={error}
-            onChangeEmail={handleChangeEmail}
-        />
+      <ChangeEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        currentEmail={profile.email}
+        onSuccess={success}
+        onError={error}
+        onChangeEmail={handleChangeEmail}
+      />
 
-        <SecurityQuestionModal
-            isOpen={showSecurityQuestionModal}
-            onClose={() => setShowSecurityQuestionModal(false)}
-            currentQuestionKey={profile.securityQuestion}
-            onSuccess={success}
-            onError={error}
-            onSetSecurityQuestion={handleSetSecurityQuestion}
-        />
+      <SecurityQuestionModal
+        isOpen={showSecurityQuestionModal}
+        onClose={() => setShowSecurityQuestionModal(false)}
+        currentQuestionKey={profile.securityQuestion}
+        onSuccess={success}
+        onError={error}
+        onSetSecurityQuestion={handleSetSecurityQuestion}
+      />
 
-        {/* Modal de eventos */}
-        {selectedEvent && (
-            <EventDetailsModal
-            event={selectedEvent}
-            onClose={() => setSelectedEvent(null)}
-            onJoinToggle={handleJoinToggle}
-            isJoined={isUserJoined(selectedEvent._id)}
-            />
-        )}
+      {selectedEvent && (
+        <EventDetailsModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onJoinToggle={handleJoinToggle}
+          isJoined={isUserJoined(selectedEvent._id)}
+        />
+      )}
     </div>
-);
+  );
 }

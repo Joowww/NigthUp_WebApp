@@ -184,4 +184,67 @@ export const friendshipService = {
       throw error;
     }
   },
+  sendFriendRequestV2: async (recipientId: string): Promise<any> => {
+    try {
+      const response = await api.post('/friendship/v2/request', { recipientId });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending friend request V2:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener amigos en común
+   */
+  getMutualFriends: async (userId: string, limit = 10): Promise<PublicUser[]> => {
+    try {
+      const response = await api.get(`/friendship/mutual/${userId}?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching mutual friends:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Aceptar solicitud de amistad V2
+   */
+  acceptFriendRequestV2: async (friendshipId: string): Promise<any> => {
+    try {
+      const response = await api.patch(`/friendship/v2/request/${friendshipId}/accept`);
+      return response.data;
+    } catch (error) {
+      console.error('Error accepting friend request V2:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancelar solicitud de amistad V2
+   */
+  cancelFriendRequestV2: async (friendshipId: string): Promise<void> => {
+    try {
+      await api.delete(`/friendship/v2/request/${friendshipId}/cancel`);
+    } catch (error) {
+      console.error('Error canceling friend request V2:', error);
+      throw error;
+    }
+  },
+
+  getMyFriends: async (): Promise<PublicUser[]> => {
+    return friendshipService.getFriends();
+  },
+
+  getFriendsV2: async (): Promise<PublicUser[]> => {
+    try {
+      const response = await api.get('/friendship/friends/v2');
+      console.log('📋 [getFriendsV2] Amigos recibidos:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching friends V2:', error);
+      return [];
+    }
+  }
+
 };

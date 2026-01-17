@@ -2,12 +2,26 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Music, Building2, Calendar, LogOut, ChevronLeft,
-   MessageCircle, LayoutDashboard, Heart, User, Settings, Users } from 'lucide-react';
+import { 
+  Home, 
+  Music, 
+  Building2, 
+  Calendar, 
+  LogOut, 
+  ChevronLeft,
+  MessageCircle, 
+  LayoutDashboard, 
+  Heart, 
+  User, 
+  Settings, 
+  Users 
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { OnlineStatusBadge } from '../features/OnlineStatusBadge';
+import { useNotifications } from '../hooks/useNotifications';
+import { NotificationBadge } from '../features/friendship/NotificationsBadge';
 
 interface SimpleSidebarProps {
   isOpen: boolean;
@@ -21,16 +35,20 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { unreadCount } = useNotifications(); // ✅ Hook de notificaciones
 
   const menuItems = [
-    { id: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
-    { id: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
-    { id: '/business', label: t('sidebar.venues', 'Discotecas'), icon: Building2 },
-    { id: '/friendship', label: 'Amigos', icon: Users },
-    { id: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
-    { id: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
-    { id: '/favorites', label: 'Favoritos', icon: Heart },
-    ...(user?.role === 'manager' ? [{ id: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }] : []),
+    { path: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
+    { path: '/events', label: t('sidebar.events', 'Eventos'), icon: Music },
+    { path: '/business', label: t('sidebar.venues', 'Discotecas'), icon: Building2 },
+    { path: '/friendship', label: 'Amigos', icon: Users }, // ✅ Este tendrá el badge
+    { path: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
+    { path: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
+    { path: '/favorites', label: 'Favoritos', icon: Heart },
+    ...(user?.role === 'manager' 
+      ? [{ path: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }] 
+      : []
+    ),
   ];
 
   const handleNavigation = (path: string) => {
@@ -61,8 +79,12 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-2">{t('common.close_session_confirm', '¿Cerrar sesión?')}</h3>
-            <p className="text-gray-400 text-sm mb-4">Tendrás que volver a iniciar sesión para acceder</p>
+            <h3 className="text-xl font-bold text-white mb-2">
+              {t('common.close_session_confirm', '¿Cerrar sesión?')}
+            </h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Tendrás que volver a iniciar sesión para acceder
+            </p>
             <div className="flex gap-3 mt-4">
               <button 
                 onClick={() => setShowLogoutConfirm(false)} 
@@ -107,14 +129,31 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.id;
+              const isActive = location.pathname === item.path;
+              
               return (
-                <li key={item.id}>
+                <li key={item.path}>
                   <button 
-                    onClick={() => handleNavigation(item.id)} 
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${isActive ? 'bg-primary/10 text-primary border border-primary/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                    onClick={() => handleNavigation(item.path)} // ✅ NAVEGA NORMALMENTE
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-3 rounded-xl 
+                      transition-all duration-200
+                      ${isActive 
+                        ? 'bg-primary/10 text-primary border border-primary/20' 
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                      }
+                    `}
                   >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+                    {/* ✅ Icono con badge de notificaciones */}
+                    <div className="relative">
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+                      
+                      {/* ✅ Badge SOLO en Amigos */}
+                      {item.path === '/friendship' && (
+                        <NotificationBadge count={unreadCount} />
+                      )}
+                    </div>
+                    
                     <span className="font-medium">{item.label}</span>
                   </button>
                 </li>
@@ -123,7 +162,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
           </ul>
         </nav>
 
-        {/* ✅ FOOTER USUARIO MEJORADO */}
+        {/* FOOTER USUARIO */}
         <div className="p-4 border-t border-border/50 bg-gradient-to-t from-black/40 to-transparent">
           {/* Menú desplegable de usuario */}
           {showUserMenu && (
@@ -153,7 +192,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 cursor-pointer transition-all group"
           >
-            {/* ✅ AVATAR CON INDICADOR ONLINE */}
+            {/* AVATAR CON INDICADOR ONLINE */}
             <div className="relative">
               <Avatar className="w-11 h-11 border-2 border-primary/20 group-hover:border-primary/40 transition-colors">
                 <AvatarImage src={avatarUrl} alt={user?.username} />
