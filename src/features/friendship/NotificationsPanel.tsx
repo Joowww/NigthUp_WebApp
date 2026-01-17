@@ -1,13 +1,19 @@
-// src/features/friendship/NotificationsPanel.tsx (NUEVO ARCHIVO)
+// src/features/friendship/NotificationsPanel.tsx
+
+import React from 'react';
 import { Bell, Check, CheckCheck, Trash2, X, UserPlus, UserCheck, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { Button } from '../../ui/button';
 import { ScrollArea } from '../../ui/scroll-area';
 import { useNotifications } from '../../hooks/useNotifications';
-import { getAvatarUrl, getFullName } from '../../modules/friendship';
+import { friendshipService } from './friendshipService';
+import { socketService } from '../../lib/socket';
+import { useAuth } from '../../hooks/useAuth';
+import { getAvatarUrl } from '../../modules/friendship';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useFriendshipContext } from '../../context/FriendshipContext';
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -15,16 +21,77 @@ interface NotificationsPanelProps {
 }
 
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, unreadCount, loading, markAllAsRead, deleteNotification, refresh } = useNotifications();
+  const { user } = useAuth();
+  const { updateFriendship } = useFriendshipContext(); // ✅ AÑADIR
   const navigate = useNavigate();
+  const [processingIds, setProcessingIds] = React.useState<string[]>([]);
 
   if (!isOpen) return null;
 
-  const handleNotificationClick = async (notificationId: string, read: boolean) => {
-    if (!read) {
-      await markAsRead(notificationId);
+  // ✅ FUNCIÓN: Aceptar solicitud
+  
+const handleAcceptRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
+    setProcessingIds(prev => [...prev, notificationId]);
+    
+    try {
+      console.log('✅ [NotificationsPanel] Aceptando solicitud:', { notificationId, friendshipId, senderId });
+      
+      // ✅ ACEPTAR SOLICITUD
+      const response = await friendshipService.acceptFriendRequestV2(friendshipId);
+      console.log('✅ [NotificationsPanel] Respuesta:', response);
+      
+      // ✅ ACTUALIZAR CONTEXTO - Ahora son amigos
+      updateFriendship(senderId, 'friends', friendshipId);
+      
+      // ✅ EMITIR SOCKET
+      if (user?.id) {
+        socketService.emitFriendRequestAccepted(senderId, user.id, friendshipId);
+      }
+      
+      // ✅ ELIMINAR NOTIFICACIÓN (ahora con validación de ID temporal)
+      await deleteNotification(notificationId);
+      
+      // ✅ REFRESCAR LISTA COMPLETA
+      await refresh();
+      
+      console.log('✅ [NotificationsPanel] Solicitud aceptada correctamente');
+      
+    } catch (err: any) {
+      console.error('❌ [NotificationsPanel] Error aceptando solicitud:', err);
+      console.error('❌ [NotificationsPanel] Detalles:', err.response?.data);
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== notificationId));
     }
   };
+
+   // ✅ FUNCIÓN: Rechazar solicitud
+  const handleRejectRequest = async (notificationId: string, friendshipId: string, senderId: string) => {
+  setProcessingIds(prev => [...prev, notificationId]);
+  
+  try {
+    console.log('❌ [NotificationsPanel] Rechazando solicitud:', { notificationId, friendshipId, senderId });
+    
+    await friendshipService.cancelFriendRequestV2(friendshipId);
+    
+    updateFriendship(senderId, 'none', null);
+    
+    // ✅ EMITIR CON senderId
+    if (user?.id) {
+      socketService.emitFriendRequestCancelled(senderId, friendshipId, user.id); // ✅ AÑADIR user.id
+    }
+    
+    await deleteNotification(notificationId);
+    await refresh();
+    
+    console.log('✅ [NotificationsPanel] Solicitud rechazada correctamente');
+    
+  } catch (err: any) {
+    console.error('❌ [NotificationsPanel] Error rechazando solicitud:', err);
+  } finally {
+    setProcessingIds(prev => prev.filter(id => id !== notificationId));
+  }
+};
 
   const handleGoToFriendship = () => {
     navigate('/friendship');
@@ -99,14 +166,14 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 const fullName = notification.sender.firstName || notification.sender.lastName
                   ? `${notification.sender.firstName || ''} ${notification.sender.lastName || ''}`.trim()
                   : notification.sender.username;
+                const isProcessing = processingIds.includes(notification._id);
 
                 return (
                   <div
                     key={notification._id}
-                    onClick={() => handleNotificationClick(notification._id, notification.read)}
                     className={`
-                      p-4 cursor-pointer transition-all
-                      ${isUnread ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'}
+                      p-4 transition-all
+                      ${isUnread ? 'bg-primary/5' : ''}
                     `}
                   >
                     <div className="flex gap-3">
@@ -150,39 +217,68 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                           }
                         </p>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-3">
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(notification.createdAt), { 
                               addSuffix: true,
                               locale: es 
                             })}
                           </span>
+                        </div>
 
-                          <div className="flex items-center gap-1">
-                            {!notification.read && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markAsRead(notification._id);
-                                }}
-                                className="p-1.5 hover:bg-muted rounded-md transition-colors"
-                                title="Marcar como leída"
-                              >
-                                <Check className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
-                              </button>
-                            )}
+                        {/* ✅ BOTONES DE ACCIÓN - Solo para solicitudes pendientes */}
+                        {notification.type === 'friend_request' && (
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handleAcceptRequest(
+                                notification._id,
+                                notification.friendshipId,
+                                notification.sender._id
+                              )}
+                              size="sm"
+                              disabled={isProcessing}
+                              className="flex-1 gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                            >
+                              {isProcessing ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Check className="w-3 h-3" />
+                              )}
+                              Aceptar
+                            </Button>
+                            <Button
+                              onClick={() => handleRejectRequest(
+                                notification._id,
+                                notification.friendshipId,
+                                notification.sender._id
+                              )}
+                              size="sm"
+                              variant="outline"
+                              disabled={isProcessing}
+                              className="flex-1 gap-2 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              {isProcessing ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <X className="w-3 h-3" />
+                              )}
+                              Rechazar
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Botón eliminar para notificaciones de aceptación */}
+                        {notification.type !== 'friend_request' && (
+                          <div className="flex justify-end">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNotification(notification._id);
-                              }}
+                              onClick={() => deleteNotification(notification._id)}
                               className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors"
                               title="Eliminar"
                             >
                               <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
                             </button>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>

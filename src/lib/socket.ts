@@ -215,16 +215,15 @@ class SocketService {
     console.log('✅ [Socket] Emitido friendRequestAccepted:', { requesterId, friendshipId });
   }
 
-  /**
-   * Emitir solicitud cancelada
-   */
-  emitFriendRequestCancelled(recipientId: string, friendshipId: string) {
-    this.socket?.emit('friendRequestCancelled', {
-      recipientId,
-      friendshipId
-    });
-    console.log('❌ [Socket] Emitido friendRequestCancelled:', { recipientId, friendshipId });
-  }
+  // ✅ MANTENER SOLO ESTA (línea ~229)
+emitFriendRequestCancelled(recipientId: string, friendshipId: string, senderId: string) {
+  this.socket?.emit('friendRequestCancelled', {
+    recipientId,
+    friendshipId,
+    senderId
+  });
+  console.log('❌ [Socket] Emitido friendRequestCancelled:', { recipientId, friendshipId, senderId });
+}
 
   /**
    * Escuchar solicitud recibida
@@ -259,25 +258,52 @@ class SocketService {
   }) => void) {
     this.socket?.on('friendRequestAcceptedNotification', cb);
   }
-
+  
   /**
    * Escuchar solicitud cancelada
    */
   onFriendRequestCancelledNotification(cb: (data: {
     friendshipId: string;
+    senderId: string; // ✅ AÑADIR senderId
     timestamp: Date;
   }) => void) {
     this.socket?.on('friendRequestCancelledNotification', cb);
   }
 
-  /**
-   * Dejar de escuchar eventos de amistad
-   */
-  offFriendshipEvents() {
-    this.socket?.off('friendRequestReceived');
-    this.socket?.off('friendRequestAcceptedNotification');
-    this.socket?.off('friendRequestCancelledNotification');
-  }
+/**
+ * Emitir eliminación de amigo
+ */
+emitFriendRemoved(friendId: string, friendshipId: string, removedBy: string) {
+  this.socket?.emit('friendRemoved', {
+    friendId,
+    friendshipId,
+    removedBy
+  });
+  console.log('❌ [Socket] Emitido friendRemoved:', { friendId, friendshipId, removedBy });
+}
+
+/**
+ * Escuchar eliminación de amigo
+ */
+onFriendRemovedNotification(cb: (data: {
+  friendshipId: string;
+  removedBy: any;
+  timestamp: Date;
+}) => void) {
+  this.socket?.on('friendRemovedNotification', cb);
+}
+
+/**
+ * Limpiar listeners de friendship (actualizado)
+ */
+offFriendshipEvents() {
+  this.socket?.off('friendRequestReceived');
+  this.socket?.off('friendRequestAcceptedNotification');
+  this.socket?.off('friendRequestCancelledNotification');
+  this.socket?.off('friendRemovedNotification'); // ✅ AÑADIR
+}
+
+
 }
 
 export const socketService = new SocketService();

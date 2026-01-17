@@ -13,6 +13,8 @@ import { NotificationsPanel } from './NotificationsPanel';
 import { useNotifications } from '../../hooks/useNotifications';
 import type { SearchUser } from '../../modules/friendship';
 import { useOnlineUsers } from '../../context/OnlineUsersContext'; 
+import { useFriendshipContext } from '../../context/FriendshipContext'; 
+
 
 export default function DiscoverPeople() {
   const [allUsers, setAllUsers] = useState<SearchUser[]>([]);
@@ -40,6 +42,24 @@ export default function DiscoverPeople() {
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
 
   const USERS_PER_PAGE = 9;
+
+  const { friendshipUpdates } = useFriendshipContext();
+  
+  // ✅ ACTUALIZAR usuarios cuando cambia el contexto
+  useEffect(() => {
+    setAllUsers(prev => prev.map(user => {
+      const update = friendshipUpdates.get(user._id);
+      if (update) {
+        console.log('🔄 [DiscoverPeople] Actualizando:', user.username, update.status);
+        return {
+          ...user,
+          status: update.status,
+          friendshipId: update.friendshipId
+        };
+      }
+      return user;
+    }));
+  }, [friendshipUpdates]);
 
   useEffect(() => {
     loadFilterOptions();

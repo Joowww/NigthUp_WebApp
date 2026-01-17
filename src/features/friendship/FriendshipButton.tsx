@@ -6,6 +6,8 @@ import { useToast } from '../../hooks/useToast';
 import { friendshipService } from './friendshipService';
 import { socketService } from '../../lib/socket'; 
 import { useAuth } from '../../hooks/useAuth'; 
+import { useEffect } from 'react';
+import { useFriendshipContext } from '../../context/FriendshipContext';
 
 type FriendshipStatusType = 
   | 'none' 
@@ -24,19 +26,39 @@ interface FriendshipButtonProps {
 }
 
 export function FriendshipButton({
-  userId,
-  friendshipId,
-  status,
-  onStatusChange,
-  size = 'sm',
-  fullWidth = false
-}: FriendshipButtonProps) {
+    userId,
+    friendshipId,
+    status,
+    onStatusChange,
+    size = 'sm',
+    fullWidth = false
+  }: FriendshipButtonProps) {
+    
+    const [loading, setLoading] = useState(false);
+    const [currentStatus, setCurrentStatus] = useState(status);
+    const { success, error } = useToast();
+    const { user } = useAuth();
+    const { friendshipUpdates } = useFriendshipContext();
   
-  const [loading, setLoading] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState(status);
-  const { success, error } = useToast();
-  const { user } = useAuth(); // ✅ AÑADIR
-
+    // ✅ ESCUCHAR CAMBIOS DEL CONTEXTO
+    useEffect(() => {
+      const update = friendshipUpdates.get(userId);
+      if (update && update.status !== currentStatus) {
+        console.log('🔄 [FriendshipButton] Actualización detectada:', userId, update.status);
+        setCurrentStatus(update.status);
+        onStatusChange?.(update.status);
+      }
+    }, [friendshipUpdates, userId, currentStatus, onStatusChange]);
+  
+    // ✅ ACTUALIZAR si cambia el prop status
+    useEffect(() => {
+      if (status !== currentStatus) {
+        console.log('🔄 [FriendshipButton] Prop cambió:', status);
+        setCurrentStatus(status);
+      }
+    }, [status, currentStatus]);
+  
+  
   const baseClasses = fullWidth ? 'w-full' : '';
 
   const updateStatus = (newStatus: FriendshipStatusType) => {
@@ -130,6 +152,7 @@ export function FriendshipButton({
         socketService.emitFriendRequestCancelled(
           userId, // recipientId
           friendshipId // friendshipId
+            , user.id // senderId
         );
       }
       

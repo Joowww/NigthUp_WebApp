@@ -1,24 +1,40 @@
-// src/hooks/useNotifications.ts (NUEVO ARCHIVO)
+// src/hooks/useNotifications.ts
 
 import { useState, useEffect, useCallback } from 'react';
 import { notificationService, type FriendNotification } from '../features/friendship/notificationService';
 import { socketService } from '../lib/socket';
 import { useAuth } from './useAuth';
+import { useFriendshipContext } from '../context/FriendshipContext';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<FriendNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { updateFriendship } = useFriendshipContext();
 
-  // Cargar notificaciones iniciales
   const loadNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const data = await notificationService.getNotifications();
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-      console.log('📬 [useNotifications] Notificaciones cargadas:', data);
+      
+      // ✅ ELIMINAR DUPLICADOS por friendshipId
+      const uniqueNotifications = data.notifications.reduce((acc, current) => {
+        const exists = acc.find(n => n.friendshipId === current.friendshipId && n.type === current.type);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, [] as FriendNotification[]);
+      
+      setNotifications(uniqueNotifications);
+      setUnreadCount(uniqueNotifications.filter(n => !n.read).length); // ✅ CONTAR correctamente
+      
+      console.log('📬 [useNotifications] Notificaciones cargadas:', {
+        total: data.notifications.length,
+        unique: uniqueNotifications.length,
+        unread: uniqueNotifications.filter(n => !n.read).length
+      });
     } catch (error) {
       console.error('❌ [useNotifications] Error cargando notificaciones:', error);
     } finally {
@@ -26,17 +42,16 @@ export function useNotifications() {
     }
   }, []);
 
-  // Cargar solo el contador
   const loadUnreadCount = useCallback(async () => {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
+      console.log('🔢 [useNotifications] Contador actualizado:', count);
     } catch (error) {
       console.error('❌ Error cargando contador:', error);
     }
   }, []);
 
-  // Marcar como leída
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
       await notificationService.markAsRead(notificationId);
@@ -46,12 +61,12 @@ export function useNotifications() {
       );
       
       setUnreadCount(prev => Math.max(0, prev - 1));
+      console.log('✅ [useNotifications] Notificación marcada como leída:', notificationId);
     } catch (error) {
       console.error('❌ Error marcando como leída:', error);
     }
   }, []);
 
-  // Marcar todas como leídas
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationService.markAllAsRead();
@@ -61,13 +76,26 @@ export function useNotifications() {
       );
       
       setUnreadCount(0);
+      console.log('✅ [useNotifications] Todas las notificaciones marcadas como leídas');
     } catch (error) {
       console.error('❌ Error marcando todas como leídas:', error);
     }
   }, []);
 
-  // Eliminar notificación
   const deleteNotification = useCallback(async (notificationId: string) => {
+    // ✅ VALIDAR que NO sea un ID temporal
+    if (notificationId.startsWith('temp-')) {
+      console.warn('⚠️ Intentando eliminar notificación temporal, solo eliminando del estado');
+      setNotifications(prev => {
+        const notification = prev.find(n => n._id === notificationId);
+        if (notification && !notification.read) {
+          setUnreadCount(c => Math.max(0, c - 1));
+        }
+        return prev.filter(n => n._id !== notificationId);
+      });
+      return;
+    }
+
     try {
       await notificationService.deleteNotification(notificationId);
       
@@ -78,74 +106,65 @@ export function useNotifications() {
         }
         return prev.filter(n => n._id !== notificationId);
       });
+      
+      console.log('🗑️ [useNotifications] Notificación eliminada:', notificationId);
     } catch (error) {
       console.error('❌ Error eliminando notificación:', error);
     }
   }, []);
 
-  // Escuchar eventos de socket
   useEffect(() => {
     if (!user?.id) return;
-
+  
+    console.log('🔌 [useNotifications] Conectando listeners de socket para:', user.id);
+    
     loadNotifications();
-
-    // Escuchar nueva solicitud recibida
+  
+    // ✅ NUEVA SOLICITUD RECIBIDA
     socketService.onFriendRequestReceived((data) => {
       console.log('📬 [Socket] Nueva solicitud recibida:', data);
-      
-      // Añadir notificación al principio
-      const newNotification: FriendNotification = {
-        _id: `temp-${Date.now()}`, // Temporal, se reemplazará al recargar
-        recipient: user.id,
-        sender: data.sender,
-        type: 'friend_request',
-        friendshipId: data.friendshipId,
-        read: false,
-        createdAt: data.timestamp,
-        updatedAt: data.timestamp
-      };
-
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
+      loadNotifications();
+      updateFriendship(data.sender._id, 'pending_received', data.friendshipId);
     });
-
-    // Escuchar solicitud aceptada
+  
+    // ✅ SOLICITUD ACEPTADA
     socketService.onFriendRequestAcceptedNotification((data) => {
       console.log('✅ [Socket] Solicitud aceptada:', data);
-      
-      const newNotification: FriendNotification = {
-        _id: `temp-${Date.now()}`,
-        recipient: user.id,
-        sender: data.accepter,
-        type: 'friend_accepted',
-        friendshipId: data.friendshipId,
-        read: false,
-        createdAt: data.timestamp,
-        updatedAt: data.timestamp
-      };
-
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
+      loadNotifications();
+      updateFriendship(data.accepter._id, 'friends', data.friendshipId);
     });
-
-    // Escuchar solicitud cancelada
+  
+    // ✅ SOLICITUD CANCELADA
     socketService.onFriendRequestCancelledNotification((data) => {
       console.log('❌ [Socket] Solicitud cancelada:', data);
       
-      // Eliminar notificación de la lista
       setNotifications(prev => {
-        const notification = prev.find(n => n.friendshipId === data.friendshipId);
-        if (notification && !notification.read) {
-          setUnreadCount(c => Math.max(0, c - 1));
-        }
-        return prev.filter(n => n.friendshipId !== data.friendshipId);
+        const filtered = prev.filter(n => n.friendshipId !== data.friendshipId);
+        const newUnreadCount = filtered.filter(n => !n.read).length;
+        setUnreadCount(newUnreadCount);
+        return filtered;
       });
+      
+      updateFriendship(data.senderId, 'none', null);
     });
+  
+    // ✅ AMIGO ELIMINADO (NUEVO)
+  socketService.onFriendRemovedNotification((data) => {
+    console.log('🗑️ [Socket] Amigo eliminado:', data);
+    
+    // Actualizar contexto - Ya no son amigos
+    const removerId = data.removedBy._id || data.removedBy;
+    updateFriendship(removerId, 'none', null);
+    
+    // Recargar notificaciones por si había alguna pendiente
+    loadNotifications();
+  });
 
-    return () => {
-      socketService.offFriendshipEvents();
-    };
-  }, [user?.id, loadNotifications]);
+  return () => {
+    console.log('🧹 [useNotifications] Limpiando listeners de socket');
+    socketService.offFriendshipEvents();
+  };
+}, [user?.id, loadNotifications, updateFriendship]);
 
   return {
     notifications,

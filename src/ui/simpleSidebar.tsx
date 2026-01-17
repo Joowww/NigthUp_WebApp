@@ -23,6 +23,7 @@ import { OnlineStatusBadge } from '../features/OnlineStatusBadge';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationBadge } from '../features/friendship/NotificationsBadge';
 
+
 interface SimpleSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -35,7 +36,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { unreadCount } = useNotifications(); // ✅ Hook de notificaciones
+  const { unreadCount } = useNotifications(); 
 
   const menuItems = [
     { path: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
@@ -145,13 +146,13 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
                     `}
                   >
                     {/* ✅ Icono con badge de notificaciones */}
-                    <div className="relative">
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
-                      
-                      {/* ✅ Badge SOLO en Amigos */}
-                      {item.path === '/friendship' && (
-                        <NotificationBadge count={unreadCount} />
-                      )}
+                  <div className="relative">
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+                    
+                    {/* ✅ Badge SOLO en Amigos */}
+                    {item.path === '/friendship' && unreadCount > 0 && ( 
+                      <NotificationBadge count={unreadCount} />
+                    )}
                     </div>
                     
                     <span className="font-medium">{item.label}</span>

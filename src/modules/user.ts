@@ -4,7 +4,7 @@ export interface User {
     username: string;
     email: string;
     password: string; 
-    birthday: Date;
+    birthday: string | Date;
     phoneNumber: string;
     role: 'admin' | 'manager' | 'user'; 
     active?: boolean;

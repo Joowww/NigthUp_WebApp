@@ -11,15 +11,23 @@ import { getFullName } from '../../modules/friendship';
 import type { PublicUser } from '../../modules/friendship';
 import { useNavigate } from 'react-router-dom';
 import { useOnlineUsers } from '../../context/OnlineUsersContext';
+import { useAuth } from '../../hooks/useAuth';
+import { socketService } from '../../lib/socket'; 
+import { useFriendshipContext } from '../../context/FriendshipContext'; 
+
+
 
 export function FriendsList() {
-  const [friends, setFriends] = useState<PublicUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFriend, setSelectedFriend] = useState<PublicUser | null>(null);
-  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
-  const navigate = useNavigate();
-  const { isUserOnline } = useOnlineUsers();
+    const [friends, setFriends] = useState<PublicUser[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedFriend, setSelectedFriend] = useState<PublicUser | null>(null);
+    const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+    const navigate = useNavigate();
+    const { isUserOnline } = useOnlineUsers();
+    const { updateFriendship } = useFriendshipContext(); // ✅ AÑADIR
+    const { user } = useAuth(); // ✅ AÑADIR
+
 
   useEffect(() => {
     loadFriends();
@@ -70,8 +78,23 @@ export function FriendsList() {
 
     try {
       if (friend.friendshipId) {
+        console.log('🗑️ [FriendsList] Eliminando amigo:', friend.username, friend.friendshipId);
+        
+        // ✅ ELIMINAR EN BACKEND
         await friendshipService.removeFriend(friend.friendshipId);
+        
+        // ✅ ACTUALIZAR CONTEXTO LOCAL
+        updateFriendship(friend._id, 'none', null);
+        
+        // ✅ EMITIR SOCKET AL OTRO USUARIO
+        if (user?.id) {
+          socketService.emitFriendRemoved(friend._id, friend.friendshipId, user.id);
+        }
+        
+        // ✅ ACTUALIZAR LISTA LOCAL
         setFriends(prev => prev.filter(f => f._id !== friend._id));
+        
+        console.log('✅ [FriendsList] Amigo eliminado correctamente');
       }
     } catch (err) {
       console.error('❌ Error eliminando amigo:', err);
