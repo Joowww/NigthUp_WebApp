@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   MessageCircle,
   LayoutDashboard,
-  Heart,
   User,
   Settings,
   Users
@@ -47,7 +46,6 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     { path: '/friendship', label: 'Amigos', icon: Users },
     { path: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
     { path: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
-    { path: '/favorites', label: 'Favoritos', icon: Heart },
     ...(user?.role === 'manager'
       ? [{ path: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }]
       : []
