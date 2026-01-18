@@ -504,10 +504,15 @@ export function ChatPage() {
     // Si hay parámetros de compartir, enviamos el mensaje automáticamente
     if (shareParams) {
       const text = shareParams.type === 'business'
-        ? `🎵 Discoteca compartida: [BUSINESS:${shareParams.id}]`
-        : `🎉 Evento compartido: [EVENT:${shareParams.id}]`;
+        ? `¡Echa un vistazo a ${shareParams.name}!`
+        : `¡Únete a este evento: ${shareParams.name}!`;
 
-      handleSendMessage(chatId, text);
+      handleSendMessage(chatId, text, undefined, {
+        messageType: shareParams.type,
+        businessData: shareParams.type === 'business' ? { businessId: shareParams.id } : undefined,
+        eventData: shareParams.type === 'event' ? { eventId: shareParams.id } : undefined,
+      });
+
       setShareParams(null);
       navigate('/chat', { replace: true });
     }

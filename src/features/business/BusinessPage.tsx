@@ -1,5 +1,6 @@
 // features/business/BusinessPage.tsx
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BusinessList } from './BusinessList';
 import { BusinessMap } from './BusinessMap';
 import { getBusinesses } from './bussinessService';
@@ -30,9 +31,9 @@ const calculateDistance = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -42,7 +43,8 @@ export const BusinessPage: React.FC = () => {
   const [selectedBusiness, setSelectedBusiness] = useState<IBusiness | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'map'>('list');
   const [isMapExpanded, setIsMapExpanded] = useState(false);
-  
+  const [searchParams] = useSearchParams();
+
   // Estados del buscador
   const [searchQuery, setSearchQuery] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(false);
@@ -61,63 +63,63 @@ export const BusinessPage: React.FC = () => {
   const searchRef = useRef<HTMLDivElement>(null);
 
   // NUEVO: Obtener ubicación al montar - MEJORADO
-useEffect(() => {
-  if (!('geolocation' in navigator)) {
-    console.error('❌ Geolocalización no disponible');
-    setUserLocation([40.4168, -3.7038]);
-    return;
-  }
+  useEffect(() => {
+    if (!('geolocation' in navigator)) {
+      console.error('❌ Geolocalización no disponible');
+      setUserLocation([40.4168, -3.7038]);
+      return;
+    }
 
-  console.log('📍 BusinessPage: Solicitando ubicación del dispositivo...');
+    console.log('📍 BusinessPage: Solicitando ubicación del dispositivo...');
 
-  const geoOptions: PositionOptions = {
-    enableHighAccuracy: true,
-    timeout: 30000,
-    maximumAge: 0
-  };
+    const geoOptions: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 30000,
+      maximumAge: 0
+    };
 
-  let watchId: number | null = null;
-  let hasReceivedLocation = false;
+    let watchId: number | null = null;
+    let hasReceivedLocation = false;
 
-  watchId = navigator.geolocation.watchPosition(
-    (position) => {
-      const { latitude, longitude, accuracy } = position.coords;
-      
-      console.log(`📍 BusinessPage: Ubicación recibida: [${latitude}, ${longitude}]`);
-      console.log(`🎯 BusinessPage: Precisión: ${accuracy} metros`);
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
 
-      if (!hasReceivedLocation || accuracy < 100) {
-        hasReceivedLocation = true;
-        setUserLocation([latitude, longitude]);
-        
-        if (accuracy < 50 && watchId !== null) {
-          console.log('✅ BusinessPage: Precisión excelente alcanzada, deteniendo watchPosition');
+        console.log(`📍 BusinessPage: Ubicación recibida: [${latitude}, ${longitude}]`);
+        console.log(`🎯 BusinessPage: Precisión: ${accuracy} metros`);
+
+        if (!hasReceivedLocation || accuracy < 100) {
+          hasReceivedLocation = true;
+          setUserLocation([latitude, longitude]);
+
+          if (accuracy < 50 && watchId !== null) {
+            console.log('✅ BusinessPage: Precisión excelente alcanzada, deteniendo watchPosition');
+            navigator.geolocation.clearWatch(watchId);
+          }
+        }
+      },
+      (error) => {
+        console.error('❌ BusinessPage: Error obteniendo ubicación:', error);
+
+        if (!hasReceivedLocation) {
+          console.warn('⚠️ BusinessPage: Usando ubicación por defecto (Madrid)');
+          setUserLocation([40.4168, -3.7038]);
+        }
+
+        if (watchId !== null) {
           navigator.geolocation.clearWatch(watchId);
         }
-      }
-    },
-    (error) => {
-      console.error('❌ BusinessPage: Error obteniendo ubicación:', error);
-      
-      if (!hasReceivedLocation) {
-        console.warn('⚠️ BusinessPage: Usando ubicación por defecto (Madrid)');
-        setUserLocation([40.4168, -3.7038]);
-      }
-      
+      },
+      geoOptions
+    );
+
+    return () => {
       if (watchId !== null) {
+        console.log('🧹 BusinessPage: Limpiando watchPosition');
         navigator.geolocation.clearWatch(watchId);
       }
-    },
-    geoOptions
-  );
-
-  return () => {
-    if (watchId !== null) {
-      console.log('🧹 BusinessPage: Limpiando watchPosition');
-      navigator.geolocation.clearWatch(watchId);
-    }
-  };
-}, []);
+    };
+  }, []);
 
   // NUEVO: Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -135,10 +137,22 @@ useEffect(() => {
   useEffect(() => {
     const load = async () => {
       const data = await getBusinesses(0, 50);
-      setBusinesses(data.businesses);
+      const allBusinesses = data.businesses;
+      setBusinesses(allBusinesses);
+
+      // Detectar si venimos con un ID para auto-seleccionar
+      const targetId = searchParams.get('id');
+      if (targetId) {
+        const target = allBusinesses.find((b: IBusiness) => b._id === targetId);
+        if (target) {
+          setSelectedBusiness(target);
+          setActiveTab('map');
+          setIsMapExpanded(true);
+        }
+      }
     };
     load();
-  }, []);
+  }, [searchParams]);
 
   // Filtrado inteligente de negocios
   const filteredBusinesses = useMemo(() => {
@@ -147,7 +161,7 @@ useEffect(() => {
     // Filtro por búsqueda de texto (SOLO NOMBRE)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(business => 
+      filtered = filtered.filter(business =>
         business.name.toLowerCase().includes(query)
       );
     }
@@ -183,10 +197,10 @@ useEffect(() => {
 
         return distA - distB;
       });
-    } 
-    
+    }
+
     if (sortByName) {
-      filtered = [...filtered].sort((a, b) => 
+      filtered = [...filtered].sort((a, b) =>
         a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
       );
     }
@@ -197,7 +211,7 @@ useEffect(() => {
   // NUEVO: Resultados para el dropdown de búsqueda
   const searchResults = useMemo(() => {
     if (!searchQuery.trim() || activeTab !== 'map') return [];
-    
+
     return filteredBusinesses;
   }, [searchQuery, filteredBusinesses, activeTab]);
 
@@ -241,15 +255,15 @@ useEffect(() => {
         <h1 className="text-4xl font-bold bg-gradient-to-r from-[#ff0080] via-[#00d9ff] to-[#ff0080] bg-clip-text text-transparent animate-pulse">
           Discotecas
         </h1>
-        
+
         <p className="text-muted-foreground text-base max-w-3xl">
-          Explora las mejores discotecas y clubs nocturnos de tu ciudad. Descubre nuevos lugares, 
-          consulta eventos próximos y encuentra tu próximo destino para disfrutar de la mejor música 
+          Explora las mejores discotecas y clubs nocturnos de tu ciudad. Descubre nuevos lugares,
+          consulta eventos próximos y encuentra tu próximo destino para disfrutar de la mejor música
           y ambiente nocturno. 🎉
         </p>
 
-         {/* ✅ MOSTRAR SOLO CUANDO HAY BÚSQUEDA O FILTROS ACTIVOS */}
-         {(searchQuery || hasActiveFilters) && (
+        {/* ✅ MOSTRAR SOLO CUANDO HAY BÚSQUEDA O FILTROS ACTIVOS */}
+        {(searchQuery || hasActiveFilters) && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="font-medium">
               {filteredBusinesses.length} de {businesses.length} discotecas disponibles
@@ -318,11 +332,10 @@ useEffect(() => {
 
                       {/* Badge de estado */}
                       <div className="flex-shrink-0">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          business.active 
-                            ? 'bg-green-500/20 text-green-500' 
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${business.active
+                            ? 'bg-green-500/20 text-green-500'
                             : 'bg-red-500/20 text-red-500'
-                        }`}>
+                          }`}>
                           {business.active ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
@@ -338,8 +351,8 @@ useEffect(() => {
                     onClick={() => setShowAllSearchResults(!showAllSearchResults)}
                     className="w-full text-sm text-center text-primary hover:text-primary/80 font-medium py-2 rounded-md hover:bg-accent transition-colors"
                   >
-                    {showAllSearchResults 
-                      ? `Mostrar menos` 
+                    {showAllSearchResults
+                      ? `Mostrar menos`
                       : `Ver todos los resultados (${searchResults.length})`
                     }
                   </button>
@@ -352,8 +365,8 @@ useEffect(() => {
         {/* Dropdown de filtros CON CHECKBOXES INDEPENDIENTES */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className={`h-11 px-4 gap-2 ${hasActiveFilters ? 'border-primary text-primary' : ''}`}
             >
               <Filter className="h-4 w-4" />
@@ -470,51 +483,51 @@ useEffect(() => {
       )}
 
       {/* LISTADO */}
-        {activeTab === 'list' && filteredBusinesses.length > 0 && (
-          <BusinessList
-            businesses={filteredBusinesses}
-            onShowBusinessOnMap={handleShowBusinessOnMap}
-            userLocation={userLocation ?? undefined}
-          />
-        )}
+      {activeTab === 'list' && filteredBusinesses.length > 0 && (
+        <BusinessList
+          businesses={filteredBusinesses}
+          onShowBusinessOnMap={handleShowBusinessOnMap}
+          userLocation={userLocation ?? undefined}
+        />
+      )}
 
       {/* MAPA NORMAL */}
-        {activeTab === 'map' && filteredBusinesses.length > 0 && !isMapExpanded && (
-          <div className="h-[calc(100vh-350px)] min-h-[600px]">
-            <BusinessMap
-              businesses={filteredBusinesses}
-              selectedBusiness={selectedBusiness}
-              onSelectBusiness={setSelectedBusiness}
-              userLocation={userLocation ?? undefined}  // ← Usar nullish coalescing
-            />
-          </div>
-        )}
+      {activeTab === 'map' && filteredBusinesses.length > 0 && !isMapExpanded && (
+        <div className="h-[calc(100vh-350px)] min-h-[600px]">
+          <BusinessMap
+            businesses={filteredBusinesses}
+            selectedBusiness={selectedBusiness}
+            onSelectBusiness={setSelectedBusiness}
+            userLocation={userLocation ?? undefined}  // ← Usar nullish coalescing
+          />
+        </div>
+      )}
 
-        {/* MAPA EXPANDIDO (MODAL) */}
-        {isMapExpanded && (
-          <div className="fixed inset-0 z-50 bg-black/80 animate-in fade-in duration-300">
-            <div className="relative w-full h-full p-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-6 right-6 z-[60] bg-background/80 hover:bg-background"
-                onClick={closeExpandedMap}
-              >
-                <X size={24} />
-              </Button>
+      {/* MAPA EXPANDIDO (MODAL) */}
+      {isMapExpanded && (
+        <div className="fixed inset-0 z-50 bg-black/80 animate-in fade-in duration-300">
+          <div className="relative w-full h-full p-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-6 right-6 z-[60] bg-background/80 hover:bg-background"
+              onClick={closeExpandedMap}
+            >
+              <X size={24} />
+            </Button>
 
-              <div className="w-full h-full rounded-lg overflow-hidden">
-                <BusinessMap
-                  businesses={filteredBusinesses}
-                  selectedBusiness={selectedBusiness}
-                  onSelectBusiness={setSelectedBusiness}
-                  isExpanded
-                  userLocation={userLocation ?? undefined}  // ← Usar nullish coalescing
-                />
-              </div>
+            <div className="w-full h-full rounded-lg overflow-hidden">
+              <BusinessMap
+                businesses={filteredBusinesses}
+                selectedBusiness={selectedBusiness}
+                onSelectBusiness={setSelectedBusiness}
+                isExpanded
+                userLocation={userLocation ?? undefined}  // ← Usar nullish coalescing
+              />
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };

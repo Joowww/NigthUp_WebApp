@@ -52,7 +52,7 @@ export function BusinessMessage({ businessData, isOwn }: BusinessMessageProps) {
 
     return (
         <div
-            onClick={() => navigate(`/business/${business._id}`)}
+            onClick={() => navigate(`/business?id=${business._id}`)}
             className={`
         w-full max-w-[320px] overflow-hidden rounded-2xl shadow-lg border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]
         ${isOwn
@@ -146,7 +146,7 @@ export function BusinessMessage({ businessData, isOwn }: BusinessMessageProps) {
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/business/${business._id}`);
+                        navigate(`/business?id=${business._id}`);
                     }}
                     className={`
             flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] active:scale-95 shadow-md

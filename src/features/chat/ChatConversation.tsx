@@ -26,6 +26,7 @@ import { useOnlineUsers } from '../../context/OnlineUsersContext';
 import { getAvatarUrl } from '../../modules/friendship';
 import { censorText } from '../../utils/profanityFilter';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BusinessMessage } from './BusinessMessage';
 
 interface ChatConversationProps {
   chat: IConversationFormatted & { messages: IMessageFormatted[] };
@@ -136,13 +137,16 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
     try {
       setIsUploading(true);
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', file); // El backend usa 'image' para el campo file
       formData.append('folder', 'chat');
 
       // Detectar tipo de recurso
       let resourceType = 'image';
-      if (file.type.startsWith('audio/')) resourceType = 'video'; // Cloudinary trata audio como video sin stream
+      if (file.type.startsWith('audio/')) resourceType = 'video';
       if (file.type.startsWith('video/')) resourceType = 'video';
+      if (!file.type.startsWith('image/') && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
+        resourceType = 'auto'; // Otros documentos
+      }
       formData.append('resourceType', resourceType);
 
       const { data } = await api.post('/files/upload', formData, {
@@ -157,9 +161,10 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
         // Enviar con el metadato correcto
         let type: any = 'image';
         if (file.type.startsWith('audio/')) type = 'audio';
-        if (file.type.startsWith('video/')) type = 'video';
+        else if (file.type.startsWith('video/')) type = 'video';
+        else if (!file.type.startsWith('image/')) type = 'text'; // Enviar como link si es doc
 
-        onSendMessage(chat.id, `📎 Archivo: ${file.name}`, replyingTo?.id, {
+        onSendMessage(chat.id, type === 'text' ? `📎 Documento: ${file.name} \n${fileUrl}` : `📎 Archivo: ${file.name}`, replyingTo?.id, {
           messageType: type,
           imageUrl: type === 'image' ? fileUrl : undefined,
           audioUrl: type === 'audio' ? fileUrl : undefined,
@@ -462,6 +467,16 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
                               </a>
                             </div>
                           </div>
+                        ) : msg.businessData ? (
+                          <div className="py-1">
+                            <BusinessMessage
+                              businessData={msg.businessData!}
+                              isOwn={isOwn}
+                            />
+                            {msg.text && !msg.text.includes('¡Echa un vistazo a') && (
+                              <p className="text-[14px] md:text-[15px] font-medium mt-2">{msg.text}</p>
+                            )}
+                          </div>
                         ) : msg.messageType === 'image' ? (
                           <div className="space-y-2">
                             <img
@@ -470,7 +485,7 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
                               className="max-w-full rounded-lg border border-white/10 shadow-sm cursor-pointer"
                               onClick={() => window.open(msg.imageUrl, '_blank')}
                             />
-                            {msg.text && !msg.text.startsWith('📎 Archivo:') && (
+                            {msg.text && !msg.text.startsWith('📎 Archivo:') && !msg.text.startsWith('📎 Documento:') && (
                               <p className="text-[14px] md:text-[15px] font-medium">{msg.text}</p>
                             )}
                           </div>
@@ -556,7 +571,7 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
             <span className="text-[9px] text-white uppercase tracking-widest font-black">Digital Awareness Active • AI Censor ON</span>
           </div>
         </div>
-      </div>
+      </div >
 
       <UserProfileModal
         username={otherUserUsername || ''}

@@ -148,6 +148,9 @@ interface SocketSendMessageData {
   imageUrl?: string;
   audioUrl?: string;
   videoUrl?: string;
+  locationData?: ILocationData;
+  eventData?: IEventData;
+  businessData?: IBusinessData;
 }
 
 interface SocketEditMessageData {
