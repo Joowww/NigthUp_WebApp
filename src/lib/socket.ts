@@ -176,6 +176,10 @@ class SocketService {
     this.socket?.on('userDisconnected', cb);
   }
 
+  onUserStatusChanged(cb: (data: { userId: string; isOnline: boolean }) => void) {
+    this.socket?.on('userStatusChanged', cb);
+  }
+
   // ============================================
   // OFF
   // ============================================
@@ -187,6 +191,17 @@ class SocketService {
   offUserDisconnected() {
     this.socket?.off('userDisconnected');
   }
+
+  offUserStatusChanged() {
+    this.socket?.off('userStatusChanged');
+  }
+
+  offNewMessage() { this.socket?.off('newMessage'); }
+  offMessageEdited() { this.socket?.off('messageEdited'); }
+  offMessageDeleted() { this.socket?.off('messageDeleted'); }
+  offMessageReacted() { this.socket?.off('messageReacted'); }
+  offUserTyping() { this.socket?.off('userTyping'); }
+  offUserStoppedTyping() { this.socket?.off('userStoppedTyping'); }
 
   offAll() {
     this.socket?.removeAllListeners();
@@ -302,13 +317,59 @@ class SocketService {
   }
 
   /**
+   * Escuchar confirmación de solicitud enviada (para otras tabs)
+   */
+  onFriendRequestSentConfirmation(cb: (data: {
+    recipientId: string;
+    friendshipId: string;
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRequestSentConfirmation', cb);
+  }
+
+  /**
+   * Escuchar confirmación de solicitud aceptada (para otras tabs)
+   */
+  onFriendRequestAcceptedConfirmation(cb: (data: {
+    requesterId: string;
+    friendshipId: string;
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRequestAcceptedConfirmation', cb);
+  }
+
+  /**
+   * Escuchar confirmación de solicitud cancelada (para otras tabs)
+   */
+  onFriendRequestCancelledConfirmation(cb: (data: {
+    targetId: string;
+    friendshipId: string;
+  }) => void) {
+    this.socket?.on('friendRequestCancelledConfirmation', cb);
+  }
+
+  /**
+   * Escuchar confirmación de amigo eliminado (para otras tabs)
+   */
+  onFriendRemovedConfirmation(cb: (data: {
+    friendId: string;
+    friendshipId: string;
+  }) => void) {
+    this.socket?.on('friendRemovedConfirmation', cb);
+  }
+
+  /**
    * Limpiar listeners de friendship (actualizado)
    */
   offFriendshipEvents() {
     this.socket?.off('friendRequestReceived');
     this.socket?.off('friendRequestAcceptedNotification');
     this.socket?.off('friendRequestCancelledNotification');
-    this.socket?.off('friendRemovedNotification'); // ✅ AÑADIR
+    this.socket?.off('friendRemovedNotification');
+    this.socket?.off('friendRequestSentConfirmation');
+    this.socket?.off('friendRequestAcceptedConfirmation');
+    this.socket?.off('friendRequestCancelledConfirmation');
+    this.socket?.off('friendRemovedConfirmation');
   }
 
 

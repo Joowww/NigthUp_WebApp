@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../api';
+import { socketService } from '../lib/socket';
 
 interface AuthContextType {
   user: any | null;
@@ -33,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
-      
+
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -47,27 +48,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await api.post('/user/auth/login', { username, password });
-      
+
       const t = res.data.token;
       const userData = res.data.user;
-      
+
       // ✅ CAMBIO CLAVE: Añadir token e id al objeto user
       const userWithToken = {
         ...userData,
         token: t, // ✅ Guardar token en el objeto user
         id: userData._id || userData.id // ✅ Asegurar que tiene 'id'
       };
-      
+
       // Guardamos todo
       localStorage.setItem('token', t);
       localStorage.setItem('refreshToken', res.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(userWithToken)); // ✅ Guardar user con token
-      
+
       setToken(t);
       setUser(userWithToken); // ✅ Actualizar estado con user que incluye token
-      
+
       console.log('✅ Login exitoso. Usuario:', userWithToken);
-      
+
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -77,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // 🔥 Desconectar socket inmediatamente al cerrar sesión
+    socketService.disconnect();
+
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
@@ -92,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       token: token, // ✅ Preservar el token
       id: userData._id || userData.id // ✅ Preservar el id
     };
-    
+
     setUser(userWithToken);
     localStorage.setItem('user', JSON.stringify(userWithToken));
   };
@@ -106,12 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      updateUser, 
-      token, 
-      login, 
-      logout, 
+    <AuthContext.Provider value={{
+      user,
+      updateUser,
+      token,
+      login,
+      logout,
       isAuthenticated: !!token,
       needsOnboarding,
       loading,

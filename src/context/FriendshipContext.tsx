@@ -1,8 +1,8 @@
 // src/context/FriendshipContext.tsx
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
-export type FriendshipStatusType = 
-  | 'none' 
+export type FriendshipStatusType =
+  | 'none'
   | 'pending_sent'
   | 'pending_received'
   | 'friends'
@@ -29,17 +29,19 @@ export function FriendshipProvider({ children }: { children: React.ReactNode }) 
    * Actualiza el estado de amistad de un usuario en la app.
    * Este contexto actúa como fuente reactiva para sobreescribir el backend en la UI.
    */
-  const updateFriendship = useCallback((userId: string, status: FriendshipStatusType, friendshipId: string | null) => {
+  const updateFriendship = useCallback((rawUserId: string, status: FriendshipStatusType, friendshipId: string | null) => {
+    const userId = rawUserId.toString();
     setFriendshipUpdates(prev => {
       const newMap = new Map(prev);
-      newMap.set(userId, { userId, status, friendshipId });
+      newMap.set(userId, { userId, status, friendshipId: friendshipId?.toString() || null });
       console.log('🔄 [FriendshipContext] Actualizado:', userId, status);
       return newMap;
     });
   }, []);
 
 
-  const getFriendshipStatus = useCallback((userId: string, fallbackStatus: FriendshipStatusType = 'none'): FriendshipUpdate => {
+  const getFriendshipStatus = useCallback((rawUserId: string, fallbackStatus: FriendshipStatusType = 'none'): FriendshipUpdate => {
+    const userId = rawUserId.toString();
     const update = friendshipUpdates.get(userId);
     if (update) return update;
     return { userId, status: fallbackStatus, friendshipId: null };

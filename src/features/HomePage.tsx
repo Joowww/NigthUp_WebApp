@@ -16,6 +16,7 @@ import { EventDetailsModal } from './events/EventDetailsModal';
 
 import Loadder from './../ui/loading';
 import { ScrollArea } from '../ui/scroll-area';
+import { WelcomeBanner } from './WelcomeBanner';
 
 export function HomePage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -229,6 +230,7 @@ export function HomePage() {
       {/* ScrollArea con scrollbar personalizado */}
       <ScrollArea className="h-full w-full custom-scrollbar">
         <div className="space-y-8 px-6 py-6">
+          <WelcomeBanner />
 
           {/* --- MAPA EN LA PARTE SUPERIOR --- */}
           <section>

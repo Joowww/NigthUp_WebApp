@@ -8,9 +8,15 @@ interface ChatListProps {
   onSelectChat: (chatId: string) => void;
   onDeleteChat: (chatId: string) => void;
   onPinChat: (chatId: string) => void;
+  currentUserId: string;
 }
 
-export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, onPinChat }: ChatListProps) {
+import { OnlineStatusBadge } from '../OnlineStatusBadge';
+import { useOnlineUsers } from '../../context/OnlineUsersContext';
+import { getAvatarUrl } from '../../modules/friendship';
+
+export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, onPinChat, currentUserId }: ChatListProps) {
+  useOnlineUsers(); // Escuchar cambios globales
   const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
@@ -74,10 +80,7 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
 
   // --- Obtener avatar del chat ---
   const getChatAvatar = (chat: IConversationFormatted): string => {
-    if (chat.avatar) return chat.avatar;
-
-    // Avatar por defecto basado en el nombre
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(getChatName(chat))}&background=random`;
+    return getAvatarUrl(chat);
   };
 
   // --- Ordenamiento (Fijados primero, luego por fecha) ---
@@ -202,8 +205,21 @@ export function ChatList({ chats, selectedChatId, onSelectChat, onDeleteChat, on
                             e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chatName)}&background=random`;
                           }}
                         />
-                        {/* Indicador Online (Simulado por ahora, o podrías usar chat.participants si tuvieramos status) */}
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#121212] rounded-full"></div>
+                        {/* Indicador Online Real */}
+                        {!chat.isGroup && (() => {
+                          const otherParticipant = chat.participants.find(p =>
+                            (typeof p === 'string' ? p : p._id) !== currentUserId
+                          );
+                          const otherId = typeof otherParticipant === 'string'
+                            ? otherParticipant
+                            : (otherParticipant as any)?._id || (otherParticipant as any)?.id;
+
+                          return otherId ? (
+                            <div className="absolute bottom-0 right-0">
+                              <OnlineStatusBadge userId={otherId} size="sm" showOffline={true} />
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>

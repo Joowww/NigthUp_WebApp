@@ -18,23 +18,29 @@ export function useFriendshipActions() {
    */
   const sendFriendRequest = async (targetUserId: string) => {
     try {
-      console.log('📤 [FriendshipActions] Enviando solicitud a:', targetUserId);
+      const targetId = targetUserId.toString();
+      console.log('📤 [FriendshipActions] Enviando solicitud a:', targetId);
 
-      const response = await friendshipService.sendFriendRequestV2(targetUserId);
+      const response = await friendshipService.sendFriendRequestV2(targetId);
+      const friendship = response.friendship;
+      const friendshipId = friendship._id.toString();
 
-      // ✅ 1. Actualizar contexto local
-      updateFriendship(targetUserId, 'pending_sent', response.friendship._id.toString());
+      // ✅ 1. Determinar estado final (puede ser 'friends' por solicitud cruzada)
+      const finalStatus = friendship.status === 'accepted' ? 'friends' : 'pending_sent';
 
-      // ✅ 2. Emitir socket al destinatario
+      // ✅ 2. Actualizar contexto local
+      updateFriendship(targetId, finalStatus, friendshipId);
+
+      // ✅ 3. Emitir socket al destinatario
       if (user?.id) {
-        socketService.emitFriendRequestSent(
-          targetUserId,
-          user.id, // ✅ Revertir a enviar solo ID, el backend enriquecerá los datos
-          response.friendship._id.toString()
-        );
+        if (finalStatus === 'friends') {
+          socketService.emitFriendRequestAccepted(targetId, user.id, friendshipId);
+        } else {
+          socketService.emitFriendRequestSent(targetId, user.id, friendshipId);
+        }
       }
 
-      success('Solicitud enviada correctamente');
+      success(finalStatus === 'friends' ? '¡Ahora son amigos! 🎉' : 'Solicitud enviada correctamente');
       return response;
     } catch (err: any) {
       console.error('❌ Error enviando solicitud:', err);

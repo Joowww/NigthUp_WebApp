@@ -2,26 +2,27 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Music, 
-  Building2, 
-  Calendar, 
-  LogOut, 
+import {
+  Home,
+  Music,
+  Building2,
+  Calendar,
+  LogOut,
   ChevronLeft,
-  MessageCircle, 
-  LayoutDashboard, 
-  Heart, 
-  User, 
-  Settings, 
-  Users 
+  MessageCircle,
+  LayoutDashboard,
+  Heart,
+  User,
+  Settings,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../ui/Logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { OnlineStatusBadge } from '../features/OnlineStatusBadge';
 import { NotificationBadge } from '../features/friendship/NotificationsBadge';
-import { useNotificationsContext } from '../context/NotificationsContext'; // ✅ CAMBIAR
+import { useNotificationsContext } from '../context/NotificationsContext';
+import { getAvatarUrl } from '../modules/friendship';
 
 
 
@@ -37,7 +38,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { unreadCount } = useNotificationsContext(); 
+  const { unreadCount } = useNotificationsContext();
 
   const menuItems = [
     { path: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
@@ -47,8 +48,8 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     { path: '/chat', label: t('sidebar.chat', 'Chat'), icon: MessageCircle },
     { path: '/calendar', label: t('sidebar.calendar', 'Calendario'), icon: Calendar },
     { path: '/favorites', label: 'Favoritos', icon: Heart },
-    ...(user?.role === 'manager' 
-      ? [{ path: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }] 
+    ...(user?.role === 'manager'
+      ? [{ path: '/manager', label: t('sidebar.manager_panel', 'Panel Manager'), icon: LayoutDashboard }]
       : []
     ),
   ];
@@ -64,11 +65,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
     navigate('/login');
   };
 
-  const avatarUrl = user?.avatar?.startsWith('http') 
-    ? user.avatar 
-    : user?.avatar 
-      ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${user.avatar}`
-      : '/default-avatar.png';
+  const avatarUrl = getAvatarUrl(user as any);
 
   return (
     <>
@@ -88,14 +85,14 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
               Tendrás que volver a iniciar sesión para acceder
             </p>
             <div className="flex gap-3 mt-4">
-              <button 
-                onClick={() => setShowLogoutConfirm(false)} 
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
                 className="flex-1 px-4 py-2.5 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 transition-colors font-medium"
               >
                 {t('common.cancel', 'Cancelar')}
               </button>
-              <button 
-                onClick={handleLogout} 
+              <button
+                onClick={handleLogout}
                 className="flex-1 px-4 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors font-medium"
               >
                 {t('common.yes_logout', 'Sí, salir')}
@@ -132,30 +129,30 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <li key={item.path}>
-                  <button 
+                  <button
                     onClick={() => handleNavigation(item.path)} // ✅ NAVEGA NORMALMENTE
                     className={`
                       w-full flex items-center gap-3 px-3 py-3 rounded-xl 
                       transition-all duration-200
-                      ${isActive 
-                        ? 'bg-primary/10 text-primary border border-primary/20' 
+                      ${isActive
+                        ? 'bg-primary/10 text-primary border border-primary/20'
                         : 'text-gray-400 hover:text-white hover:bg-gray-800'
                       }
                     `}
                   >
                     {/* ✅ Icono con badge de notificaciones */}
-                  <div className="relative">
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
-                    
-                    {/* ✅ Badge SOLO en Amigos */}
-                    {item.path === '/friendship' && unreadCount > 0 && ( 
-                      <NotificationBadge count={unreadCount} />
-                    )}
+                    <div className="relative">
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+
+                      {/* ✅ Badge SOLO en Amigos */}
+                      {item.path === '/friendship' && unreadCount > 0 && (
+                        <NotificationBadge count={unreadCount} />
+                      )}
                     </div>
-                    
+
                     <span className="font-medium">{item.label}</span>
                   </button>
                 </li>
@@ -202,18 +199,18 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
                   {user?.username?.substring(0, 2).toUpperCase() || 'US'}
                 </AvatarFallback>
               </Avatar>
-              
+
               {user?.id && (
                 <div className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
-                  <OnlineStatusBadge 
-                    userId={user.id} 
-                    size="md" 
-                    showOffline={true} 
+                  <OnlineStatusBadge
+                    userId={user.id}
+                    size="md"
+                    showOffline={true}
                   />
                 </div>
               )}
-            </div>  
-            
+            </div>
+
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.username}</p>
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>

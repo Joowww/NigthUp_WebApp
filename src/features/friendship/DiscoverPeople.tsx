@@ -14,10 +14,7 @@ import { NotificationsPanel } from './NotificationsPanel';
 import { NotificationBadge } from './NotificationsBadge';
 import type { SearchUser, FriendshipStatusType } from '../../modules/friendship';
 import { useOnlineUsers } from '../../context/OnlineUsersContext';
-import { useFriendshipContext } from '../../context/FriendshipContext';
 import { useNotificationsContext } from '../../context/NotificationsContext';
-import { socketService } from '../../lib/socket'; // ✅ AÑADIR
-import { useAuth } from '../../hooks/useAuth'; // ✅ AÑADIR
 
 type SearchUserWithFriendship = SearchUser & {
   status: FriendshipStatusType;
@@ -27,7 +24,7 @@ type SearchUserWithFriendship = SearchUser & {
 export default function DiscoverPeople() {
   const [allUsers, setAllUsers] = useState<SearchUserWithFriendship[]>([]);
   const [loading, setLoading] = useState(false);
-  const [totalUsers, setTotalUsers] = useState(0);
+  const [, setTotalUsers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<SearchUserWithFriendship | null>(null);
@@ -44,35 +41,20 @@ export default function DiscoverPeople() {
     interests: string[];
   }>({ cities: [], interests: [] });
 
-  const { success, error } = useToast();
-  const { isUserOnline } = useOnlineUsers();
+  const { error } = useToast();
+  const { isUserOnline, onlineUsers } = useOnlineUsers();
   const { unreadCount } = useNotificationsContext();
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
-  const { user } = useAuth(); // ✅ AÑADIR
 
   const USERS_PER_PAGE = 9;
 
-  const { friendshipUpdates, updateFriendship } = useFriendshipContext(); // ✅ AÑADIR updateFriendship
-
-  // ✅ Actualizar usuarios cuando cambia el contexto global
+  // ELIMINADO: La sincronización manual ya no es necesaria pues UserCard 
+  // usa getFriendshipStatus directamente del contexto en cada render.
+  /*
   useEffect(() => {
-    setAllUsers(prev => prev.map(user => {
-      const update = friendshipUpdates.get(user._id);
-      if (update) {
-        console.log('🔄 [DiscoverPeople] Actualizando card desde contexto:', user.username, update.status);
-        return {
-          ...user,
-          status: update.status,
-          friendshipId: update.friendshipId
-        };
-      }
-      return user;
-    }));
+    ...
   }, [friendshipUpdates]);
-
-  // ✅ El manejo de eventos de socket se realiza globalmente en NotificationsContext
-  // y actualiza el FriendshipContext, que a su vez actualiza este componente
-  // a través del useEffect anterior.
+  */
 
 
   useEffect(() => {
@@ -130,6 +112,7 @@ export default function DiscoverPeople() {
   };
 
   const filteredUsers = useMemo(() => {
+    console.log('🔍 [DiscoverPeople] Re-calculando filteredUsers. set size:', onlineUsers.size);
     let result = allUsers;
 
     if (filters.onlineOnly) {
@@ -137,7 +120,7 @@ export default function DiscoverPeople() {
     }
 
     return result;
-  }, [allUsers, filters.onlineOnly, isUserOnline]);
+  }, [allUsers, filters.onlineOnly, isUserOnline, onlineUsers]);
 
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * USERS_PER_PAGE;

@@ -11,12 +11,12 @@ import type {
   IMessageFormatted,
   SocketNewMessageEvent,
   SocketMessageEditedEvent,
-  SocketMessageDeletedEvent,
-  SocketMessageReactedEvent,
-  SocketUserTypingEvent,
   SocketSendMessageData
 } from '../../modules/chat';
 import type { User } from '../../modules/user';
+import { OnlineStatusBadge } from '../OnlineStatusBadge';
+import { useFriendshipContext } from '../../context/FriendshipContext';
+import { censorText } from '../../utils/profanityFilter';
 
 export function ChatPage() {
   const { user } = useAuth();
@@ -27,6 +27,12 @@ export function ChatPage() {
   // Estados de Chat
   const [chats, setChats] = useState<IConversationFormatted[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const selectedChatIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
   const [messages, setMessages] = useState<Record<string, IMessageFormatted[]>>({});
   const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({});
   const [isLoadingChats, setIsLoadingChats] = useState(true);
@@ -40,14 +46,15 @@ export function ChatPage() {
   // Estados de Compartir
   const [shareParams, setShareParams] = useState<{ id: string; name: string; type: 'business' | 'event' } | null>(null);
 
-
-
   // Función helper para transformar mensaje del socket al formato del frontend
   const transformSocketMessage = (socketMessage: SocketNewMessageEvent | SocketMessageEditedEvent): IMessageFormatted => {
+    // Aplicar filtro de conciencia digital
+    const textToProcess = socketMessage.isDeleted ? 'Mensaje eliminado' : socketMessage.text;
+
     return {
       id: socketMessage._id,
       sender: socketMessage.sender,
-      text: socketMessage.isDeleted ? 'Mensaje eliminado' : socketMessage.text,
+      text: censorText(textToProcess),
       createdAt: socketMessage.createdAt,
       isEdited: socketMessage.isEdited,
       isDeleted: socketMessage.isDeleted,
@@ -88,6 +95,17 @@ export function ChatPage() {
     loadChats();
   }, [user?._id]);
 
+  // 1.2. Unirse a todas las salas de chat al cargar (para recibir actualizaciones en tiempo real)
+  useEffect(() => {
+    if (!socket || !connected || chats.length === 0) return;
+
+    chats.forEach(chat => {
+      socket.joinRoom(chat.id);
+    });
+    console.log(`📡 [ChatPage] Unido a ${chats.length} salas de chat`);
+  }, [socket, connected, chats.length]);
+
+
   // ✅ LOGICA START CHAT (MOVIDA ARRIBA PARA REUTILIZAR)
   const handleStartChat = async (targetUserId: string) => {
     try {
@@ -101,7 +119,7 @@ export function ChatPage() {
       });
 
       if (existing) {
-        alert("¡Ya tienes un chat con este usuario! Por favor, búscalo en tu lista de mensajes.");
+        // En lugar de alert, seleccionamos el chat
         setSelectedChatId(existing.id);
         setIsSearching(false);
         setSearchQuery('');
@@ -177,117 +195,139 @@ export function ChatPage() {
     }
   }, [location.search, isLoadingChats, chats.length]); // Dependencias clave
 
-  // 2. Configurar listeners de socket (SIN CAMBIOS)
+  // 2. Configurar listeners de socket (ESTABILIDAD MEJORADA)
   useEffect(() => {
     if (!socket || !connected) return;
+
+    console.log('🔌 [ChatPage] Registrando listeners de socket estables...');
 
     // Nuevo mensaje
     const handleNewMessage = (message: SocketNewMessageEvent) => {
       const conversationId = message.conversation;
+
+      // Auto-join para reactividad futura
+      socket.joinRoom(conversationId);
+
       const formattedMessage = transformSocketMessage(message);
 
-      setMessages((prev) => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), formattedMessage],
-      }));
+      setMessages((prev) => {
+        const currentMsgs = prev[conversationId] || [];
 
-      setChats((prev) =>
-        prev.map((chat) =>
+        // 1. Si el mensaje ya existe (por ID real), ignorar
+        if (currentMsgs.some(m => m.id === formattedMessage.id)) return prev;
+
+        // 2. Intentar reconciliar con un mensaje optimista (mismo texto y emisor)
+        const senderId = typeof formattedMessage.sender === 'string'
+          ? formattedMessage.sender
+          : formattedMessage.sender._id;
+
+        const tempIdx = currentMsgs.findIndex(m =>
+          m.id.startsWith('temp-') &&
+          m.text === formattedMessage.text &&
+          (typeof m.sender === 'string' ? m.sender : m.sender._id) === senderId
+        );
+
+        if (tempIdx > -1) {
+          const updatedMsgs = [...currentMsgs];
+          updatedMsgs[tempIdx] = formattedMessage;
+          return { ...prev, [conversationId]: updatedMsgs };
+        }
+
+        // 3. Si no es un duplicado ni una confirmación, añadirlo
+        return {
+          ...prev,
+          [conversationId]: [...currentMsgs, formattedMessage],
+        };
+      });
+
+      setChats((prev) => {
+        const exists = prev.find(c => c.id === conversationId);
+
+        if (!exists) {
+          // Si el chat es nuevo, refrescamos la lista
+          api.get('/chat').then(({ data }) => setChats(data || []));
+          return prev;
+        }
+
+        return prev.map((chat) =>
           chat.id === conversationId
             ? {
               ...chat,
-              lastMessage: message.text,
+              lastMessage: formattedMessage.text,
               lastMessageTime: message.createdAt,
-              unreadCount: selectedChatId === conversationId ? 0 : (chat.unreadCount || 0) + 1,
+              unreadCount: selectedChatIdRef.current === conversationId ? 0 : (chat.unreadCount || 0) + 1,
             }
             : chat
-        )
-      );
+        );
+      });
     };
 
     // Mensaje editado
-    const handleMessageEdited = (editedMessage: SocketMessageEditedEvent) => {
-      const conversationId = editedMessage.conversation;
-      const formattedMessage = transformSocketMessage(editedMessage);
-
-      setMessages((prev) => ({
+    const handleMessageEdited = (edited: SocketMessageEditedEvent) => {
+      const formatted = transformSocketMessage(edited);
+      setMessages(prev => ({
         ...prev,
-        [conversationId]: (prev[conversationId] || []).map((msg) =>
-          msg.id === editedMessage._id ? formattedMessage : msg
-        ),
+        [edited.conversation]: (prev[edited.conversation] || []).map(m => m.id === edited._id ? formatted : m)
       }));
     };
 
     // Mensaje eliminado
-    const handleMessageDeleted = ({ messageId, conversationId }: SocketMessageDeletedEvent) => {
+    const handleMessageDeleted = ({ messageId, conversationId }: any) => {
       if (conversationId) {
-        setMessages((prev) => ({
+        setMessages(prev => ({
           ...prev,
-          [conversationId]: (prev[conversationId] || []).map((msg) =>
-            msg.id === messageId ? { ...msg, text: 'Mensaje eliminado', isDeleted: true } : msg
-          ),
+          [conversationId]: (prev[conversationId] || []).map(m => m.id === messageId ? { ...m, text: 'Mensaje eliminado', isDeleted: true } : m)
         }));
       }
     };
 
-    // Reacción a mensaje
-    const handleMessageReacted = ({ messageId, reactions }: SocketMessageReactedEvent) => {
-      setMessages((prev) => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach((convId) => {
-          updated[convId] = updated[convId].map((msg) =>
-            msg.id === messageId ? { ...msg, reactions } : msg
-          );
+    // Reacción
+    const handleMessageReacted = ({ messageId, reactions }: any) => {
+      setMessages(prev => {
+        const copy = { ...prev };
+        Object.keys(copy).forEach(cid => {
+          copy[cid] = copy[cid].map(m => m.id === messageId ? { ...m, reactions } : m);
         });
-        return updated;
+        return copy;
       });
     };
 
-    // Usuario escribiendo
-    const handleUserTyping = ({ userId, conversationId }: SocketUserTypingEvent) => {
-      setTypingUsers((prev) => {
-        const newSet = new Set([...(prev[conversationId] || []), userId]);
-        return {
-          ...prev,
-          [conversationId]: newSet,
-        };
+    // Typing
+    const handleUserTyping = ({ userId, conversationId }: any) => {
+      setTypingUsers(prev => ({ ...prev, [conversationId]: new Set([...(prev[conversationId] || []), userId]) }));
+    };
+    const handleUserStoppedTyping = ({ userId, conversationId }: any) => {
+      setTypingUsers(prev => {
+        const s = new Set(prev[conversationId] || []);
+        s.delete(userId);
+        return { ...prev, [conversationId]: s };
       });
     };
 
-    // Usuario dejó de escribir
-    const handleUserStoppedTyping = ({ userId, conversationId }: SocketUserTypingEvent) => {
-      setTypingUsers((prev) => {
-        const newSet = new Set(prev[conversationId] || []);
-        newSet.delete(userId);
-        return {
-          ...prev,
-          [conversationId]: newSet,
-        };
-      });
+    const handleMessagesRead = ({ conversationId, userId: readerId }: any) => {
+      if (readerId === user?._id) {
+        setChats(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
+      }
     };
 
-    // Registrar listeners
     socket.onNewMessage(handleNewMessage);
     socket.onMessageEdited(handleMessageEdited);
     socket.onMessageDeleted(handleMessageDeleted);
     socket.onMessageReacted(handleMessageReacted);
     socket.onUserTyping(handleUserTyping);
     socket.onUserStoppedTyping(handleUserStoppedTyping);
-
-    // Mensajes leídos
-    const handleMessagesRead = ({ conversationId, userId: readerId }: any) => {
-      if (readerId === user?._id) {
-        setChats(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
-      }
-    };
     socket.getSocket()?.on('messagesRead', handleMessagesRead);
 
-    // Cleanup
     return () => {
-      socket.offAll();
+      socket.offNewMessage();
+      socket.offMessageEdited();
+      socket.offMessageDeleted();
+      socket.offMessageReacted();
+      socket.offUserTyping();
+      socket.offUserStoppedTyping();
       socket.getSocket()?.off('messagesRead', handleMessagesRead);
     };
-  }, [socket, connected, selectedChatId]);
+  }, [socket, connected, user?._id]); // ✅ NO incluir selectedChatId aquí para evitar cortes en listeners
 
   // 3. Cargar mensajes al seleccionar un chat (SIN CAMBIOS)
   useEffect(() => {
@@ -325,6 +365,7 @@ export function ChatPage() {
   // Filtra chats locales Y busca usuarios globales
   // 5. Buscar Usuarios y Amigos
   const [friends, setFriends] = useState<User[]>([]);
+  const { friendshipUpdates } = useFriendshipContext(); // ✅ AÑADIR
 
   useEffect(() => {
     const loadFriends = async () => {
@@ -338,6 +379,24 @@ export function ChatPage() {
     };
     if (user) loadFriends();
   }, [user]);
+
+  // 🔥 Reaccionar a cambios de amistad en tiempo real en la lista de amigos sugeridos
+  useEffect(() => {
+    // Si hay una actualización que pase a ser 'friends', refrescamos la lista
+    // O si se elimina a alguien, lo filtramos
+    setFriends(prev => {
+      let changed = false;
+      const newList = prev.filter(f => {
+        const update = friendshipUpdates.get(f._id);
+        if (update && update.status !== 'friends') {
+          changed = true;
+          return false;
+        }
+        return true;
+      });
+      return changed ? newList : prev;
+    });
+  }, [friendshipUpdates]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
@@ -361,20 +420,59 @@ export function ChatPage() {
     }, 400);
 
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery, user?._id]);
+  }, [searchQuery, user?._id, socket, connected]);
 
-  // 6. Enviar Mensaje (MEJORADO PARA RICOS)
+  // 6. Enviar Mensaje (MEJORADO CON OPTIMISMO)
   const handleSendMessage = (chatId: string, text: string, replyToId?: string, extraData: Partial<SocketSendMessageData> = {}) => {
-    if (!socket || !connected) {
-      console.error('Socket no conectado');
+    if (!socket) {
+      console.error('Socket no inicializado');
       return;
     }
+
+    // 1. Crear mensaje optimista
+    const optimisticMessage: IMessageFormatted = {
+      id: `temp-${Date.now()}`,
+      sender: {
+        _id: user?._id || user?.id || '',
+        username: user?.username || 'Yo',
+        avatar: user?.avatar || '',
+        email: '', // Mandatory fields for Type safety if not using 'as any' as strictly
+        phoneNumber: '',
+        role: 'user',
+        birthday: new Date(),
+        events: []
+      } as any,
+      text: censorText(text),
+      createdAt: new Date().toISOString(),
+      isEdited: false,
+      isDeleted: false,
+      reactions: [],
+      read: false,
+      ...extraData
+    };
+
+    // 2. Actualizar estado local inmediatamente
+    setMessages((prev) => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), optimisticMessage]
+    }));
+
+    // 3. Actualizar último mensaje en la lista de chats
+    setChats(prev => prev.map(c => c.id === chatId ? {
+      ...c,
+      lastMessage: text,
+      lastMessageTime: new Date().toISOString()
+    } : c));
+
+    // 4. Enviar vía socket
     socket.sendMessage({
       conversationId: chatId,
       text,
       ...(replyToId && { replyTo: replyToId }),
       ...extraData
     });
+
+    console.log('📤 [ChatPage] Mensaje enviado optimísticamente');
   };
 
   // 7. Eliminar Chat (SIN CAMBIOS)
@@ -542,11 +640,16 @@ export function ChatPage() {
                         onClick={() => handleStartChat(friend._id)}
                         className="flex items-center gap-3 p-3 mx-1 rounded-2xl hover:bg-white/5 cursor-pointer transition-all active:scale-[0.98] group border border-transparent hover:border-white/5"
                       >
-                        <img
-                          src={friend.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username)}&background=random`}
-                          className="w-10 h-10 rounded-full shadow-md"
-                          alt={friend.username}
-                        />
+                        <div className="relative">
+                          <img
+                            src={friend.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username)}&background=random`}
+                            className="w-10 h-10 rounded-full shadow-md"
+                            alt={friend.username}
+                          />
+                          <div className="absolute -bottom-0.5 -right-0.5">
+                            <OnlineStatusBadge userId={friend._id} size="sm" showOffline={true} />
+                          </div>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{friend.username}</p>
                           <p className="text-[10px] text-muted-foreground truncate">Amigo</p>
@@ -569,7 +672,9 @@ export function ChatPage() {
                         className="w-11 h-11 rounded-full shadow-md group-hover:shadow-lg transition-all"
                         alt={user.username}
                       />
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-[#1a1a1a] rounded-full"></div>
+                      <div className="absolute -bottom-0.5 -right-0.5">
+                        <OnlineStatusBadge userId={user._id} size="sm" showOffline={true} />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{user.username}</p>
@@ -604,6 +709,7 @@ export function ChatPage() {
                   onSelectChat={handleSelectChat}
                   onDeleteChat={handleDeleteChat}
                   onPinChat={handlePinChat}
+                  currentUserId={user?.id || ''}
                 />
               </>
             )}

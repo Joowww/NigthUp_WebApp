@@ -12,12 +12,12 @@ export function useSocket() {
 
       const check = setInterval(() => {
         setConnected(socketService.isConnected());
-      }, 100);
+      }, 500);
 
       return () => {
         clearInterval(check);
-        socketService.disconnect();
-        setConnected(false);
+        // NO desconectar aquí, ya que el socket es un singleton global
+        // El OnlineUsersProvider y otros contextos dependen de que siga vivo.
       };
     }
   }, [user?.id, user?.token]);

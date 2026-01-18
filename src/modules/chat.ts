@@ -122,7 +122,7 @@ interface IMessageFormatted {
   createdAt: Date | string;
   isEdited: boolean;
   isDeleted: boolean;
-  replyTo?: IMessage | { text: string; sender: string };
+  replyTo?: IMessage | { text: string; sender: string } | string;
   reactions: IReaction[];
   read: boolean;
 

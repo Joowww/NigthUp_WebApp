@@ -54,7 +54,7 @@ export interface PublicUser {
   isOnline?: boolean;
   lastSeen?: Date;
   events?: PublicEvent[];
-  friendshipId?: string | null; 
+  friendshipId?: string | null;
 }
 
 export interface PublicEvent {
@@ -78,7 +78,7 @@ export interface PublicProfileResponse {
 }
 
 export interface FriendshipStatusResponse {
-  status: FriendshipStatus;
+  status: FriendshipStatusType;
   friendshipId?: string;
   isPendingByMe?: boolean;
 }
@@ -89,19 +89,19 @@ export interface PendingRequestsResponse {
 }
 
 export interface PublicUserWithFriendship extends PublicUser {
-    status?: FriendshipStatusType;
-    friendshipId?: string | null;
-  }
-  
-  /**
-   * Tipos de estado de amistad
-   */
-  export type FriendshipStatusType = 
-    | 'none' 
-    | 'pending_sent'
-    | 'pending_received'
-    | 'friends'
-    | 'blocked';
+  status?: FriendshipStatusType;
+  friendshipId?: string | null;
+}
+
+/**
+ * Tipos de estado de amistad
+ */
+export type FriendshipStatusType =
+  | 'none'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'friends'
+  | 'blocked';
 
 // ==================== HELPERS ====================
 
@@ -129,14 +129,26 @@ export function getFullName(user: PublicUser | SearchUser): string {
   return user.username;
 }
 
-export function getAvatarUrl(user: PublicUser | SearchUser): string {
-  if (!user.avatar) {
+export function getAvatarUrl(userOrAvatar: string | { avatar?: string; username?: string; name?: string }, fallbackName?: string): string {
+  const avatar = typeof userOrAvatar === 'string' ? userOrAvatar : userOrAvatar.avatar;
+  const name = fallbackName || (typeof userOrAvatar === 'object' ? (userOrAvatar.username || userOrAvatar.name) : undefined);
+
+  if (!avatar) {
+    if (name) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+    }
     return '/default-avatar.png';
   }
-  
-  if (user.avatar.startsWith('http')) {
-    return user.avatar;
+
+  if (avatar.startsWith('http')) {
+    return avatar;
   }
-  
-  return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${user.avatar}`;
+
+  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000')
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/$/, '');
+
+  const cleanAvatar = avatar.startsWith('/') ? avatar : `/${avatar}`;
+
+  return `${apiUrl}${cleanAvatar}`;
 }

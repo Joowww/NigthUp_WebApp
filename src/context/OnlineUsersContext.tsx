@@ -33,23 +33,37 @@ export const OnlineUsersProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   }, []);
 
+  const handleStatusChanged = useCallback((data: { userId: string; isOnline: boolean }) => {
+    console.log('📡 [EVENT] userStatusChanged:', data.userId, data.isOnline);
+    setOnlineUsers((prev) => {
+      const newSet = new Set(prev);
+      if (data.isOnline) {
+        newSet.add(data.userId);
+      } else {
+        newSet.delete(data.userId);
+      }
+      return newSet;
+    });
+  }, []);
+
   useEffect(() => {
-    if (!connected) return; // 🔥 no registrar listeners hasta que haya socket real
+    if (!connected) return;
 
     console.log('✅ Registrando listeners de online users (socket listo)');
 
     socket.onOnlineUsers(handleOnlineUsers);
     socket.onUserDisconnected(handleUserDisconnected);
+    socket.onUserStatusChanged(handleStatusChanged);
 
-    // 🔥 forzar sincronización tras conectar
     socket.requestOnlineUsers();
 
     return () => {
       console.log('🧹 Limpiando listeners de OnlineUsersProvider');
       socket.offOnlineUsers();
       socket.offUserDisconnected();
+      socket.offUserStatusChanged();
     };
-  }, [connected, socket, handleOnlineUsers, handleUserDisconnected]);
+  }, [connected, socket, handleOnlineUsers, handleUserDisconnected, handleStatusChanged]);
 
   const isUserOnline = useCallback(
     (userId: string): boolean => {

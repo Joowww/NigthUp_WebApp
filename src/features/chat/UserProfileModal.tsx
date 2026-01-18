@@ -1,5 +1,6 @@
 import { X, MapPin, Calendar, Heart, Users } from 'lucide-react';
 import type { User } from '../../modules/user';
+import { OnlineStatusBadge } from '../OnlineStatusBadge';
 
 interface UserProfileModalProps {
     user: User;
@@ -55,9 +56,14 @@ export function UserProfileModal({ user, onClose, onStartChat, onShareEvent, onS
                                         e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&size=128&background=random`;
                                     }}
                                 />
-                                {user.isOnline && (
-                                    <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-[#1a1a1a] shadow-lg" />
-                                )}
+                                <div className="absolute bottom-2 right-2">
+                                    <OnlineStatusBadge
+                                        userId={user._id}
+                                        size="lg"
+                                        showOffline={true}
+                                        className="border-4 border-[#1a1a1a]"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

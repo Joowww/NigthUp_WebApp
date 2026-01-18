@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useEffect } from 'react';
 import { useNotifications } from '../hooks/useNotifications';
-import { socketService } from '../lib/socket';
 import { useAuth } from '../hooks/useAuth';
+import { useSocket } from '../hooks/useSocket';
 import { useFriendshipContext } from './FriendshipContext';
 import type { FriendNotification } from '../features/friendship/notificationService';
 
@@ -24,19 +24,26 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const notificationsData = useNotifications();
   const { user } = useAuth();
+  const { socket, connected } = useSocket(); // ✅ Usar hook para saber el estado real
   const { updateFriendship } = useFriendshipContext();
 
   // ✅ LISTENERS GLOBALES DE SOCKET (se ejecutan en toda la app)
   useEffect(() => {
-    if (!user?.id) return;
+    // 🔴 IMPORTANTE: Solo registrar si el usuario está autenticado Y el socket está conectado
+    if (!user?.id || !connected) {
+      if (!connected && user?.id) {
+        console.log('⏳ [NotificationsProvider] Esperando a que el socket conecte...');
+      }
+      return;
+    }
 
-    console.log('🔌 [NotificationsProvider] Configurando listeners globales para:', user.id);
+    console.log('🔌 [NotificationsProvider] Socket LISTO. Configurando listeners globales...');
 
-    // ✅ NUEVA SOLICITUD RECIBIDA
+    // ✅ 1. NUEVA SOLICITUD RECIBIDA (Para el Receptor)
     const handleFriendRequestReceived = (data: any) => {
-      console.log('📬 [Socket Global] Nueva solicitud recibida (HANDLER):', JSON.stringify(data, null, 2));
+      console.log('📬 [Socket Global] Nueva solicitud recibida:', data);
 
-      // 1. Crear notificación temporal optimista
+      // Crear notificación temporal optimista
       const newNotification: FriendNotification = {
         _id: `temp-${Date.now()}`,
         recipient: user?.id || '',
@@ -48,29 +55,23 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         updatedAt: new Date(data.timestamp || Date.now())
       };
 
-      // 2. Actualizar estado y contador inmediatamente
       notificationsData.setNotifications(prev => [newNotification, ...prev]);
       notificationsData.setUnreadCount(prev => prev + 1);
 
-      // 3. Refrescar del servidor (con delay para evitar condiciones de carrera)
-      setTimeout(() => {
-        notificationsData.refresh();
-      }, 2000);
+      const senderId = data.sender._id || data.sender;
+      updateFriendship(senderId.toString(), 'pending_received', data.friendshipId);
 
-      // 4. Actualizar contexto de amistad
-      updateFriendship(data.sender._id, 'pending_received', data.friendshipId);
+      setTimeout(() => notificationsData.refresh(), 2000);
     };
 
-    // ✅ SOLICITUD ACEPTADA
+    // ✅ 2. SOLICITUD ACEPTADA (Para el Solicitante original)
     const handleFriendRequestAccepted = (data: any) => {
-      console.log('✅ [Socket Global] Solicitud aceptada:', data);
+      console.log('✅ [Socket Global] Solicitud aceptada por otro usuario:', data);
 
-      // 1. Crear notificación visual para el usuario (Requester)
-      // Esto asegura que reciba feedback visual y se incremente el contador del sidebar
       const newNotification: FriendNotification = {
         _id: `temp-accepted-${Date.now()}`,
         recipient: user?.id || '',
-        sender: data.accepter, // El que aceptó es el "sender" de esta notificación
+        sender: data.accepter,
         type: 'friend_accepted',
         friendshipId: data.friendshipId,
         read: false,
@@ -78,62 +79,95 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         updatedAt: new Date(data.timestamp || Date.now())
       };
 
-      // 2. Actualizar estado y contador
       notificationsData.setNotifications(prev => [newNotification, ...prev]);
       notificationsData.setUnreadCount(prev => prev + 1);
 
-      // 3. ✅ ACTUALIZAR CONTEXTO - ESTO ACTUALIZA LA CARD
-      // ⚠️ CAMBIO IMPORTANTE: Debe ser data.accepter (quien aceptó), NO data.requester
-      const accepterId = typeof data.accepter === 'string' ? data.accepter : data.accepter._id;
+      const accepterId = (data.accepter._id || data.accepter).toString();
       updateFriendship(accepterId, 'friends', data.friendshipId);
-
-      console.log('✅ [NotificationsProvider] Ahora son amigos:', accepterId);
     };
 
-    // ✅ SOLICITUD CANCELADA
+    // ✅ 3. SOLICITUD CANCELADA/RECHAZADA (Para cualquiera de los dos)
     const handleFriendRequestCancelled = (data: any) => {
-      console.log('❌ [Socket Global] Solicitud cancelada:', data);
-
-      // Eliminar notificación
+      console.log('❌ [Socket Global] Solicitud cancelada por el otro:', data);
       notificationsData.setNotifications(prev => {
         const filtered = prev.filter(n => n.friendshipId !== data.friendshipId);
-        const newUnreadCount = filtered.filter(n => !n.read).length;
-        notificationsData.setUnreadCount(newUnreadCount);
+        notificationsData.setUnreadCount(filtered.filter(n => !n.read).length);
         return filtered;
       });
-
-      // Actualizar contexto
       updateFriendship(data.senderId, 'none', null);
     };
 
-    // ✅ AMIGO ELIMINADO
+    // ✅ 4. AMIGO ELIMINADO (Para el que fue eliminado)
     const handleFriendRemoved = (data: any) => {
-      console.log('🗑️ [Socket Global] Amigo eliminado:', data);
+      console.log('🗑️ [Socket Global] Amigo eliminado por el otro:', data);
       const removerId = data.removedBy._id || data.removedBy;
-      updateFriendship(removerId, 'none', null);
+      updateFriendship(removerId.toString(), 'none', null);
       notificationsData.refresh();
     };
 
-    // ✅ REGISTRAR LISTENERS
-    socketService.onFriendRequestReceived(handleFriendRequestReceived);
-    socketService.onFriendRequestAcceptedNotification(handleFriendRequestAccepted);
-    socketService.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
-    socketService.onFriendRemovedNotification(handleFriendRemoved);
+    // ==============================================================
+    // 🔄 SINCRONIZACIÓN ENTRE TABS (Confirmaciones del servidor)
+    // ==============================================================
 
-    // 🔍 DEBUG: Escuchar cualquier evento
-    const socket = socketService.getSocket();
-    if (socket) {
-      socket.onAny((event, ...args) => {
-        console.log(`🔍 [Socket DEBUG] Evento recibido: ${event}`, args);
-      });
-    }
-
-    // ✅ CLEANUP
-    return () => {
-      console.log('🧹 [NotificationsProvider] Limpiando listeners globales');
-      socketService.offFriendshipEvents();
+    const handleSentConfirmation = (data: any) => {
+      console.log('🔄 [Socket Sync] Sincronizando solicitud enviada en otra tab');
+      updateFriendship(data.recipientId.toString(), 'pending_sent', data.friendshipId);
     };
-  }, [user?.id, notificationsData.refresh, updateFriendship]);
+
+    const handleAcceptedConfirmation = (data: any) => {
+      console.log('🔄 [Socket Sync] Sincronizando solicitud aceptada en otra tab');
+      updateFriendship(data.requesterId.toString(), 'friends', data.friendshipId);
+
+      // ✅ 1. Limpiar notificación localmente de forma inmediata
+      notificationsData.setNotifications(prev => {
+        const filtered = prev.filter(n => n.friendshipId !== data.friendshipId);
+        // Recalcular contador de no leídas
+        const newUnread = filtered.filter(n => !n.read).length;
+        notificationsData.setUnreadCount(newUnread);
+        return filtered;
+      });
+
+      // ✅ 2. Refrescar del servidor para asegurar consistencia
+      notificationsData.refresh();
+    };
+
+    const handleCancelledConfirmation = (data: any) => {
+      console.log('🔄 [Socket Sync] Sincronizando cancelación en otra tab');
+      updateFriendship(data.targetId.toString(), 'none', null);
+
+      // ✅ Limpiar notificación localmente
+      notificationsData.setNotifications(prev => {
+        const filtered = prev.filter(n => n.friendshipId !== data.friendshipId);
+        const newUnread = filtered.filter(n => !n.read).length;
+        notificationsData.setUnreadCount(newUnread);
+        return filtered;
+      });
+
+      notificationsData.refresh();
+    };
+
+    const handleRemovedConfirmation = (data: any) => {
+      console.log('🔄 [Socket Sync] Sincronizando eliminación en otra tab');
+      updateFriendship(data.friendId.toString(), 'none', null);
+    };
+
+    // REGISTRAR TODO
+    socket.onFriendRequestReceived(handleFriendRequestReceived);
+    socket.onFriendRequestAcceptedNotification(handleFriendRequestAccepted);
+    socket.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
+    socket.onFriendRemovedNotification(handleFriendRemoved);
+
+    // Sync tabs
+    socket.onFriendRequestSentConfirmation(handleSentConfirmation);
+    socket.onFriendRequestAcceptedConfirmation(handleAcceptedConfirmation);
+    socket.onFriendRequestCancelledConfirmation(handleCancelledConfirmation);
+    socket.onFriendRemovedConfirmation(handleRemovedConfirmation);
+
+    return () => {
+      console.log('🧹 [NotificationsProvider] Limpiando listeners');
+      socket.offFriendshipEvents();
+    };
+  }, [user?.id, connected, socket, updateFriendship, notificationsData.refresh]);
 
   // ✅ POLLING FALLBACK (Cada 30s)
   // Asegura que las notificaciones lleguen incluso si falla el socket
