@@ -10,7 +10,6 @@ import {
   Globe,
   Instagram,
   Twitter,
-  Facebook,
   Sparkles,
   Heart
 } from 'lucide-react';
@@ -27,7 +26,6 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { ScrollArea } from '../../ui/scroll-area';
-import { Separator } from '../../ui/separator';
 import { OnlineStatusBadge } from '../../features/OnlineStatusBadge';
 import { FriendshipButton } from './FriendshipButton';
 import { MutualFriends } from './MutualFriends';

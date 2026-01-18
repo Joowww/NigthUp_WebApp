@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom'; // Import nuevo
 import { ChatList } from './ChatList';
 import { ChatConversation } from './ChatConversation';
