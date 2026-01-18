@@ -7,7 +7,7 @@ import { Badge } from '../../ui/badge';
 import { FriendCard } from './FriendCard';
 import { FriendProfileModal } from './FriendProfileModal';
 import { friendshipService } from './friendshipService';
-import { getFullName, type PublicUserWithFriendship, type FriendshipStatusType } from '../../modules/friendship';
+import { getFullName, type PublicUserWithFriendship } from '../../modules/friendship';
 import { useNavigate } from 'react-router-dom';
 import { useOnlineUsers } from '../../context/OnlineUsersContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,6 +16,7 @@ import { useFriendshipContext } from '../../context/FriendshipContext';
 
 export function FriendsList() {
   const [friends, setFriends] = useState<PublicUserWithFriendship[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PublicUserWithFriendship[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFriend, setSelectedFriend] = useState<PublicUserWithFriendship | null>(null);
@@ -49,6 +50,28 @@ export function FriendsList() {
       setLoading(false);
     }
   };
+
+  const loadPendingRequests = async () => {
+    try {
+      const data = await friendshipService.getPendingRequests();
+      if (data && Array.isArray(data.received) && data.received.length > 0) {
+        const requests = data.received.map((req: any) => ({
+          ...req.sender,
+          _id: req.sender._id || req.sender.id,
+          status: 'pending_received',
+          friendshipId: req._id,
+        }));
+        setPendingRequests(requests);
+      }
+    } catch (err) {
+      console.error('❌ Error cargando solicitudes:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadFriends();
+    loadPendingRequests();
+  }, []);
 
   const filteredFriends = useMemo(() => {
     let result = friends;
@@ -173,54 +196,81 @@ export function FriendsList() {
           className="gap-2"
         >
           <div
-            className={`w-2 h-2 rounded-full ${
-              showOnlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'
-            }`}
+            className={`w-2 h-2 rounded-full ${showOnlineOnly ? 'bg-white animate-pulse' : 'bg-green-500'
+              }`}
           />
           Solo online
         </Button>
       </div>
 
-      {/* Grid */}
-      {filteredFriends.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFriends.map((friend) => {
-            if (!friend || !friend.username) {
-              console.warn('⚠️ Amigo sin username:', friend);
-              return null;
-            }
+      {/* Solicitudes de Amistad Pendientes */}
+      {
+        pendingRequests.length > 0 && (
+          <div className="mb-8 animate-in slide-in-from-top-4">
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-2 h-8 rounded-full bg-primary" />
+              Solicitudes Pendientes
+              <Badge variant="secondary">{pendingRequests.length}</Badge>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingRequests.map((request) => (
+                <FriendCard
+                  key={request._id}
+                  friend={request}
+                  onViewProfile={() => setSelectedFriend(request)}
+                  onSendMessage={() => handleSendMessage(request)}
+                  onRemove={() => { }} // No aplica aquí, lo maneja el botón
+                />
+              ))}
+            </div>
+          </div>
+        )
+      }
 
-            return (
-              <FriendCard
-                key={friend._id}
-                friend={friend}
-                onViewProfile={() => setSelectedFriend(friend)}
-                onSendMessage={() => handleSendMessage(friend)}
-                onRemove={() => handleRemoveFriend(friend)}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-muted/20 rounded-lg">
-          <p className="text-muted-foreground">
-            {showOnlineOnly
-              ? 'Ninguno de tus amigos está online ahora'
-              : `No se encontraron amigos con "${searchQuery}"`}
-          </p>
-        </div>
-      )}
+      {/* Grid de Amigos */}
+      {
+        filteredFriends.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredFriends.map((friend) => {
+              if (!friend || !friend.username) {
+                console.warn('⚠️ Amigo sin username:', friend);
+                return null;
+              }
+
+              return (
+                <FriendCard
+                  key={friend._id}
+                  friend={friend}
+                  onViewProfile={() => setSelectedFriend(friend)}
+                  onSendMessage={() => handleSendMessage(friend)}
+                  onRemove={() => handleRemoveFriend(friend)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-muted/20 rounded-lg">
+            <p className="text-muted-foreground">
+              {showOnlineOnly
+                ? 'Ninguno de tus amigos está online ahora'
+                : `No se encontraron amigos con "${searchQuery}"`}
+            </p>
+          </div>
+        )
+      }
 
       {/* Modal de perfil */}
-      {selectedFriend && (
-        <FriendProfileModal
-          friend={selectedFriend}
-          isOpen={!!selectedFriend}
-          onClose={() => setSelectedFriend(null)}
-          onSendMessage={() => handleSendMessage(selectedFriend)}
-          onRemove={() => handleRemoveFriend(selectedFriend)}
-        />
-      )}
-    </div>
+      {
+        selectedFriend && (
+          <FriendProfileModal
+            friend={selectedFriend!}
+            isOpen={!!selectedFriend}
+            onClose={() => setSelectedFriend(null)}
+            onSendMessage={() => handleSendMessage(selectedFriend!)}
+            onRemove={() => handleRemoveFriend(selectedFriend!)}
+          />
+        )
+      }
+    </div >
   );
 }

@@ -34,34 +34,66 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     // ✅ NUEVA SOLICITUD RECIBIDA
     const handleFriendRequestReceived = (data: any) => {
-      console.log('📬 [Socket Global] Nueva solicitud recibida:', data);
-      
-      // Refrescar notificaciones
-      notificationsData.refresh();
-      
-      // Actualizar contexto de amistad
+      console.log('📬 [Socket Global] Nueva solicitud recibida (HANDLER):', JSON.stringify(data, null, 2));
+
+      // 1. Crear notificación temporal optimista
+      const newNotification: FriendNotification = {
+        _id: `temp-${Date.now()}`,
+        recipient: user?.id || '',
+        sender: data.sender,
+        type: 'friend_request',
+        friendshipId: data.friendshipId,
+        read: false,
+        createdAt: new Date(data.timestamp || Date.now()),
+        updatedAt: new Date(data.timestamp || Date.now())
+      };
+
+      // 2. Actualizar estado y contador inmediatamente
+      notificationsData.setNotifications(prev => [newNotification, ...prev]);
+      notificationsData.setUnreadCount(prev => prev + 1);
+
+      // 3. Refrescar del servidor (con delay para evitar condiciones de carrera)
+      setTimeout(() => {
+        notificationsData.refresh();
+      }, 2000);
+
+      // 4. Actualizar contexto de amistad
       updateFriendship(data.sender._id, 'pending_received', data.friendshipId);
     };
 
     // ✅ SOLICITUD ACEPTADA
     const handleFriendRequestAccepted = (data: any) => {
-        console.log('✅ [Socket Global] Solicitud aceptada:', data);
-        
-        // 1. Refrescar notificaciones
-        notificationsData.refresh();
-        
-        // 2. ✅ ACTUALIZAR CONTEXTO
-        // ⚠️ CAMBIO IMPORTANTE: Debe ser data.accepter (quien aceptó), NO data.requester
-        const accepterId = typeof data.accepter === 'string' ? data.accepter : data.accepter._id;
-        updateFriendship(accepterId, 'friends', data.friendshipId);
-        
-        console.log('✅ [NotificationsProvider] Ahora son amigos:', accepterId);
+      console.log('✅ [Socket Global] Solicitud aceptada:', data);
+
+      // 1. Crear notificación visual para el usuario (Requester)
+      // Esto asegura que reciba feedback visual y se incremente el contador del sidebar
+      const newNotification: FriendNotification = {
+        _id: `temp-accepted-${Date.now()}`,
+        recipient: user?.id || '',
+        sender: data.accepter, // El que aceptó es el "sender" de esta notificación
+        type: 'friend_accepted',
+        friendshipId: data.friendshipId,
+        read: false,
+        createdAt: new Date(data.timestamp || Date.now()),
+        updatedAt: new Date(data.timestamp || Date.now())
       };
+
+      // 2. Actualizar estado y contador
+      notificationsData.setNotifications(prev => [newNotification, ...prev]);
+      notificationsData.setUnreadCount(prev => prev + 1);
+
+      // 3. ✅ ACTUALIZAR CONTEXTO - ESTO ACTUALIZA LA CARD
+      // ⚠️ CAMBIO IMPORTANTE: Debe ser data.accepter (quien aceptó), NO data.requester
+      const accepterId = typeof data.accepter === 'string' ? data.accepter : data.accepter._id;
+      updateFriendship(accepterId, 'friends', data.friendshipId);
+
+      console.log('✅ [NotificationsProvider] Ahora son amigos:', accepterId);
+    };
 
     // ✅ SOLICITUD CANCELADA
     const handleFriendRequestCancelled = (data: any) => {
       console.log('❌ [Socket Global] Solicitud cancelada:', data);
-      
+
       // Eliminar notificación
       notificationsData.setNotifications(prev => {
         const filtered = prev.filter(n => n.friendshipId !== data.friendshipId);
@@ -69,7 +101,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         notificationsData.setUnreadCount(newUnreadCount);
         return filtered;
       });
-      
+
       // Actualizar contexto
       updateFriendship(data.senderId, 'none', null);
     };
@@ -88,12 +120,33 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     socketService.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
     socketService.onFriendRemovedNotification(handleFriendRemoved);
 
+    // 🔍 DEBUG: Escuchar cualquier evento
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.onAny((event, ...args) => {
+        console.log(`🔍 [Socket DEBUG] Evento recibido: ${event}`, args);
+      });
+    }
+
     // ✅ CLEANUP
     return () => {
       console.log('🧹 [NotificationsProvider] Limpiando listeners globales');
       socketService.offFriendshipEvents();
     };
   }, [user?.id, notificationsData.refresh, updateFriendship]);
+
+  // ✅ POLLING FALLBACK (Cada 30s)
+  // Asegura que las notificaciones lleguen incluso si falla el socket
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const interval = setInterval(() => {
+      console.log('⏰ [NotificationsProvider] Polling notifications...');
+      notificationsData.refresh();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [user?.id, notificationsData.refresh]);
 
   return (
     <NotificationsContext.Provider value={notificationsData}>

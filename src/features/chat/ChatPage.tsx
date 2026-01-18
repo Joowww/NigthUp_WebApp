@@ -1,37 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom'; // Import nuevo
 import { ChatList } from './ChatList';
 import { ChatConversation } from './ChatConversation';
 import { useAuth } from '../../hooks/useAuth';
 import { useSocket } from '../../hooks/useSocket';
 import api from '../../api';
 import { Search, X, MessageSquarePlus, Loader2 } from 'lucide-react';
-import type { 
-  IConversationFormatted, 
+import type {
+  IConversationFormatted,
   IMessageFormatted,
   SocketNewMessageEvent,
   SocketMessageEditedEvent,
   SocketMessageDeletedEvent,
   SocketMessageReactedEvent,
-  SocketUserTypingEvent
+  SocketUserTypingEvent,
+  SocketSendMessageData
 } from '../../modules/chat';
 import type { User } from '../../modules/user';
 
 export function ChatPage() {
   const { user } = useAuth();
-  const socket = useSocket();
-  
+  const { socket, connected } = useSocket();
+  const location = useLocation(); // Hook location
+  const navigate = useNavigate();
+
   // Estados de Chat
   const [chats, setChats] = useState<IConversationFormatted[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, IMessageFormatted[]>>({});
   const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({});
   const [isLoadingChats, setIsLoadingChats] = useState(true);
-  
+
   // Estados de Búsqueda
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearchingLoading, setIsSearchingLoading] = useState(false);
+
+  // Estados de Compartir
+  const [shareParams, setShareParams] = useState<{ id: string; name: string; type: 'business' | 'event' } | null>(null);
+
+
 
   // Función helper para transformar mensaje del socket al formato del frontend
   const transformSocketMessage = (socketMessage: SocketNewMessageEvent | SocketMessageEditedEvent): IMessageFormatted => {
@@ -42,13 +51,20 @@ export function ChatPage() {
       createdAt: socketMessage.createdAt,
       isEdited: socketMessage.isEdited,
       isDeleted: socketMessage.isDeleted,
-      replyTo: !socketMessage.replyTo 
-        ? undefined 
+      replyTo: !socketMessage.replyTo
+        ? undefined
         : typeof socketMessage.replyTo === 'string'
           ? undefined
           : socketMessage.replyTo,
       reactions: socketMessage.reactions,
-      read: socketMessage.readBy.length > 1
+      read: socketMessage.readBy.length > 1,
+      messageType: socketMessage.messageType,
+      imageUrl: socketMessage.imageUrl,
+      audioUrl: socketMessage.audioUrl,
+      videoUrl: socketMessage.videoUrl,
+      locationData: socketMessage.locationData,
+      eventData: socketMessage.eventData,
+      businessData: socketMessage.businessData,
     };
   };
 
@@ -72,9 +88,98 @@ export function ChatPage() {
     loadChats();
   }, [user?._id]);
 
-  // 2. Configurar listeners de socket
+  // ✅ LOGICA START CHAT (MOVIDA ARRIBA PARA REUTILIZAR)
+  const handleStartChat = async (targetUserId: string) => {
+    try {
+      // 1. Buscar si ya existe en estado local
+      const existing = chats.find(c => {
+        if (c.isGroup) return false;
+        return c.participants?.some((p: User | string) => {
+          const participantId = typeof p === 'string' ? p : p._id;
+          return participantId === targetUserId;
+        });
+      });
+
+      if (existing) {
+        alert("¡Ya tienes un chat con este usuario! Por favor, búscalo en tu lista de mensajes.");
+        setSelectedChatId(existing.id);
+        setIsSearching(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        return;
+      }
+
+      // 2. Si no existe, crear o buscar en backend
+      const { data: newChat } = await api.post('/chat/conversation', { recipientId: targetUserId });
+
+      // 3. Verificar si el backend devolvió un chat que ya teníamos pero no vimos
+      setChats(prev => {
+        const exists = prev.find(c => c.id === newChat.conversationId || c.id === newChat._id);
+        if (exists) return prev;
+
+        // Si es nuevo de verdad, formatéalo si es necesario
+        // La respuesta de POST /chat/conversation devuelve { conversationId, message } a veces
+        // O el objeto completo. Vamos a asumir que necesitamos refrescar o es { conversationId }
+
+        // Hack: Si devuelve solo ID, mejor recargar chats o buscarlo
+        if (newChat.conversationId && !newChat.participants) {
+          // Es el formato { conversationId: "...", message: "..." }
+          // Deberíamos hacer fetch de esta conversación o recargar todo
+          // Por simplicidad, agregamos un placeholder y dejamos que el socket o refresh lo arregle
+          // O mejor: recargamos chats silenciamente
+          // loadChats(); <-- No disponible aqui facilmente sin refactor
+          return prev;
+        }
+        return [newChat, ...prev];
+      });
+
+      // El endpoint devuelve { conversationId: "...", message: "..." } según swagger
+      const realId = newChat.conversationId || newChat.id || newChat._id;
+
+      if (realId) {
+        // Si no tenemos el objeto completo, forzamos recarga de chats para tener la info completa (nombre, avatar)
+        // Esto es más seguro que intentar construir el objeto manual
+        const { data: allChats } = await api.get('/chat');
+        setChats(allChats);
+        setSelectedChatId(realId);
+      }
+
+      setIsSearching(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      console.error('Error creando chat:', error);
+    }
+  };
+
+  // ✅ 1.5. DETECTAR QUERY PARAMS
   useEffect(() => {
-    if (!socket || !socket.isConnected()) return;
+    const params = new URLSearchParams(location.search);
+    const openUserId = params.get('openUserId');
+    const shareBusinessId = params.get('shareBusiness');
+    const shareEventId = params.get('shareEvent');
+    const name = params.get('name');
+
+    if (openUserId && !isLoadingChats && chats.length > 0) {
+      handleStartChat(openUserId);
+      navigate('/chat', { replace: true });
+    } else if (openUserId && !isLoadingChats && chats.length === 0) {
+      handleStartChat(openUserId);
+      navigate('/chat', { replace: true });
+    }
+
+    if ((shareBusinessId || shareEventId) && name) {
+      setShareParams({
+        id: (shareBusinessId || shareEventId)!,
+        name,
+        type: shareBusinessId ? 'business' : 'event'
+      });
+    }
+  }, [location.search, isLoadingChats, chats.length]); // Dependencias clave
+
+  // 2. Configurar listeners de socket (SIN CAMBIOS)
+  useEffect(() => {
+    if (!socket || !connected) return;
 
     // Nuevo mensaje
     const handleNewMessage = (message: SocketNewMessageEvent) => {
@@ -90,11 +195,11 @@ export function ChatPage() {
         prev.map((chat) =>
           chat.id === conversationId
             ? {
-                ...chat,
-                lastMessage: message.text,
-                lastMessageTime: message.createdAt,
-                unreadCount: selectedChatId === conversationId ? 0 : (chat.unreadCount || 0) + 1,
-              }
+              ...chat,
+              lastMessage: message.text,
+              lastMessageTime: message.createdAt,
+              unreadCount: selectedChatId === conversationId ? 0 : (chat.unreadCount || 0) + 1,
+            }
             : chat
         )
       );
@@ -169,59 +274,80 @@ export function ChatPage() {
     socket.onUserTyping(handleUserTyping);
     socket.onUserStoppedTyping(handleUserStoppedTyping);
 
+    // Mensajes leídos
+    const handleMessagesRead = ({ conversationId, userId: readerId }: any) => {
+      if (readerId === user?._id) {
+        setChats(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
+      }
+    };
+    socket.getSocket()?.on('messagesRead', handleMessagesRead);
+
     // Cleanup
     return () => {
       socket.offAll();
+      socket.getSocket()?.off('messagesRead', handleMessagesRead);
     };
-  }, [socket, selectedChatId]);
+  }, [socket, connected, selectedChatId]);
 
-  // 3. Cargar mensajes al seleccionar un chat
+  // 3. Cargar mensajes al seleccionar un chat (SIN CAMBIOS)
   useEffect(() => {
     if (!selectedChatId || !user?._id) return;
-
-    // Si ya tenemos mensajes, solo unirse a la sala
     if (messages[selectedChatId] && messages[selectedChatId].length > 0) {
       socket?.joinRoom(selectedChatId);
       return;
     }
-
     const fetchMessages = async () => {
       try {
         const { data } = await api.get(`/chat/${selectedChatId}/messages`);
-        setMessages((prev) => ({ ...prev, [selectedChatId]: data || [] }));
+
+        // Transformamos los mensajes para asegurar que tengan el campo 'id'
+        const formattedMessages = (data || []).map((m: any) => ({
+          ...m,
+          id: m._id,
+          read: true // Si acabamos de cargarlos vía getMessages, el backend ya los marcó como leídos
+        }));
+
+        setMessages((prev) => ({ ...prev, [selectedChatId]: formattedMessages }));
+        setChats(prev => prev.map(c => c.id === selectedChatId ? { ...c, unreadCount: 0 } : c));
         socket?.joinRoom(selectedChatId);
       } catch (error) {
         console.error('Error fetching messages:', error);
         setMessages((prev) => ({ ...prev, [selectedChatId]: [] }));
       }
     };
-
     fetchMessages();
-
     return () => {
-      if (selectedChatId && socket) {
-        socket.leaveRoom(selectedChatId);
-      }
+      if (selectedChatId && socket) socket.leaveRoom(selectedChatId);
     };
   }, [selectedChatId, user?._id, socket]);
 
-  // 4. Lógica de Búsqueda de Usuarios
+  // ✅ 4. Lógica de Búsqueda MEJORADA
+  // Filtra chats locales Y busca usuarios globales
+  // 5. Buscar Usuarios y Amigos
+  const [friends, setFriends] = useState<User[]>([]);
+
+  useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        const { data } = await api.get('/friendship/friends');
+        // El backend devuelve amigos del usuario logueado
+        setFriends(data || []);
+      } catch (e) {
+        console.error("Error cargando amigos para chat:", e);
+      }
+    };
+    if (user) loadFriends();
+  }, [user]);
+
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
       if (searchQuery.length >= 2) {
         setIsSearchingLoading(true);
         try {
-          const { data } = await api.get('/user', { 
-            params: { 
-              search: searchQuery,
-              limit: 10
-            } 
-          });
-          
-          const filtered = Array.isArray(data) 
+          const { data } = await api.get(`/user/search?q=${searchQuery}`);
+          const filtered = Array.isArray(data)
             ? data.filter((u: User) => u._id !== user?._id)
             : [];
-            
           setSearchResults(filtered);
         } catch (error) {
           console.error('Error buscando usuarios:', error);
@@ -237,184 +363,301 @@ export function ChatPage() {
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, user?._id]);
 
-  // 5. Crear o Abrir Conversación
-  const handleStartChat = async (targetUserId: string) => {
-    try {
-      const existing = chats.find(c => {
-        if (c.isGroup) return false;
-        
-        return c.participants?.some((p: User | string) => {
-          const participantId = typeof p === 'string' ? p : p._id;
-          return participantId === targetUserId;
-        });
-      });
-
-      if (existing) {
-        setSelectedChatId(existing.id);
-        setIsSearching(false);
-        setSearchQuery('');
-        setSearchResults([]);
-        return;
-      }
-
-      const { data: newChat } = await api.post('/chat', { recipientId: targetUserId });
-      
-      setChats(prev => [newChat, ...prev]);
-      setSelectedChatId(newChat.id || newChat._id);
-      setIsSearching(false);
-      setSearchQuery('');
-      setSearchResults([]);
-    } catch (error) {
-      console.error('Error creando chat:', error);
-    }
-  };
-
-  // 6. Enviar Mensaje
-  const handleSendMessage = (chatId: string, text: string, replyToId?: string) => {
-    if (!socket || !socket.isConnected()) {
+  // 6. Enviar Mensaje (MEJORADO PARA RICOS)
+  const handleSendMessage = (chatId: string, text: string, replyToId?: string, extraData: Partial<SocketSendMessageData> = {}) => {
+    if (!socket || !connected) {
       console.error('Socket no conectado');
       return;
     }
-    
-    socket.sendMessage({ 
-      conversationId: chatId, 
+    socket.sendMessage({
+      conversationId: chatId,
       text,
-      ...(replyToId && { replyTo: replyToId })
+      ...(replyToId && { replyTo: replyToId }),
+      ...extraData
     });
   };
 
-  // 7. Eliminar Chat
+  // 7. Eliminar Chat (SIN CAMBIOS)
   const handleDeleteChat = async (chatId: string) => {
     try {
       await api.delete(`/chat/${chatId}`);
       setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-      if (selectedChatId === chatId) {
-        setSelectedChatId(null);
-      }
+      if (selectedChatId === chatId) setSelectedChatId(null);
     } catch (error) {
       console.error('Error eliminando chat:', error);
     }
   };
 
-  // 8. Fijar Chat
+  // 8. Fijar Chat (SIN CAMBIOS)
   const handlePinChat = (chatId: string) => {
     setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat
-      )
+      prev.map((chat) => chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat)
     );
   };
 
-  const currentChat = chats.find(c => c.id === selectedChatId);
+  // 9. Estado de Filtros
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'groups'>('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 10. Modificar setSelectedChatId para manejar compartir
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+
+    // Si hay parámetros de compartir, enviamos el mensaje automáticamente
+    if (shareParams) {
+      const text = shareParams.type === 'business'
+        ? `🎵 Discoteca compartida: [BUSINESS:${shareParams.id}]`
+        : `🎉 Evento compartido: [EVENT:${shareParams.id}]`;
+
+      handleSendMessage(chatId, text);
+      setShareParams(null);
+      navigate('/chat', { replace: true });
+    }
+  };
+
+  const filteredChats = chats.filter((chat) => {
+    // 1. Filtro de Texto (Búsqueda)
+    const matchesSearch = chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    // 2. Filtro de Pestañas
+    if (activeFilter === 'unread') return (chat.unreadCount || 0) > 0;
+    if (activeFilter === 'groups') return chat.isGroup;
+
+    return true;
+  });
+
+  const handleNewChatClick = () => {
+    // Enfocar búsqueda para iniciar nuevo chat tras buscar usuarios
+    searchInputRef.current?.focus();
+    // Opcional: Podría abrir un modal de "Seleccionar Contacto"
+  };
+
+  const selectedChat = chats.find(c => c.id === selectedChatId);
+  const selectedChatMessages = selectedChatId ? (messages[selectedChatId] || []) : [];
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex bg-background overflow-hidden border-t border-border/40">
-      
-      {/* SIDEBAR */}
-      <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-card ${selectedChatId ? 'hidden md:flex' : 'flex'}`}>
-        
-        {/* Buscador */}
-        <div className="p-4 border-b border-border/40">
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Buscar usuarios..."
-              className="w-full pl-9 pr-8 py-2 bg-muted/50 rounded-xl text-sm border border-transparent focus:border-primary/20 focus:bg-background focus:outline-none transition-all"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsSearching(true);
-              }}
-              onFocus={() => setIsSearching(true)}
-            />
-            {isSearching && (
-              <button 
-                onClick={() => { 
-                  setIsSearching(false); 
-                  setSearchQuery(''); 
-                  setSearchResults([]);
-                }}
-                className="absolute right-2 p-1 hover:bg-muted rounded-full transition-colors"
+    <div className="flex h-[calc(100dvh-64px)] md:h-[calc(100vh-64px)] bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center overflow-hidden font-sans text-foreground">
+      {/* Overlay Oscuro + Glassmorphism Global */}
+      <div className="w-full h-full flex bg-background/80 backdrop-blur-3xl shadow-2xl overflow-hidden">
+
+        {/* Sidebar (ChatList) */}
+        <div className={`
+          w-full md:w-[360px] lg:w-[400px] flex-shrink-0 flex flex-col border-r border-white/5 bg-black/10 backdrop-blur-md relative z-10 transition-all duration-300
+          ${selectedChatId ? 'hidden md:flex' : 'flex'}
+        `}>
+          {/* Header Sidebar */}
+          <div className="p-5 flex items-center justify-between">
+            <h1 className="text-2xl font-bold bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">
+              Mensajes
+            </h1>
+            <div className="flex gap-2">
+              <button
+                onClick={handleNewChatClick}
+                className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full transition-all hover:scale-105 active:scale-95 border border-white/5 group"
+                title="Nuevo Chat"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <MessageSquarePlus className="w-5 h-5 text-primary group-hover:text-primary-foreground transition-colors" />
               </button>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="px-5 pb-4">
+            <div className="relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Buscar chats o personas..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearching(!!e.target.value);
+                }}
+                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-white/10 transition-all placeholder:text-muted-foreground/60 shadow-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setIsSearching(false);
+                    setSearchResults([]);
+                  }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter Tabs (Visual) */}
+          <div className="px-5 pb-2 flex gap-2 overflow-x-auto no-scrollbar mask-gradient-r">
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'unread', label: 'No leídos' },
+              { id: 'groups', label: 'Grupos' }
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id as any)}
+                className={`
+                  px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap active:scale-95
+                  ${activeFilter === filter.id
+                    ? 'bg-primary/20 border-primary/20 text-primary shadow-sm shadow-primary/10'
+                    : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'}
+                `}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de Chats / Resultados */}
+          <div className="flex-1 overflow-y-auto px-3 space-y-1 py-2 custom-scrollbar">
+            {/* Resultados Globales */}
+            {isSearching && (
+              <div className="mb-4 animate-in slide-in-from-left-5">
+                <h3 className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2 mt-2">
+                  {isSearchingLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Resultados Globales
+                </h3>
+
+                {!isSearchingLoading && searchResults.length === 0 && searchQuery.length >= 2 && filteredChats.length === 0 && (
+                  <p className="px-4 text-xs text-muted-foreground italic text-center py-4">No se encontraron usuarios.</p>
+                )}
+
+                {/* Mostrar Amigos cuando no hay búsqueda activa o como sugerencia */}
+                {searchQuery.length < 2 && searchResults.length === 0 && friends.length > 0 && (
+                  <div className="mb-2 animate-in fade-in transition-all">
+                    <h4 className="px-4 text-[9px] font-bold text-primary/70 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      Sugerencias (Amigos)
+                    </h4>
+                    {friends.map(friend => (
+                      <div
+                        key={friend._id}
+                        onClick={() => handleStartChat(friend._id)}
+                        className="flex items-center gap-3 p-3 mx-1 rounded-2xl hover:bg-white/5 cursor-pointer transition-all active:scale-[0.98] group border border-transparent hover:border-white/5"
+                      >
+                        <img
+                          src={friend.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username)}&background=random`}
+                          className="w-10 h-10 rounded-full shadow-md"
+                          alt={friend.username}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{friend.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">Amigo</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="my-4 border-t border-white/5 mx-4" />
+                  </div>
+                )}
+
+                {searchResults.map(user => (
+                  <div
+                    key={user._id}
+                    onClick={() => handleStartChat(user._id)}
+                    className="flex items-center gap-3 p-3 mx-1 rounded-2xl hover:bg-white/5 cursor-pointer transition-all active:scale-[0.98] group border border-transparent hover:border-white/5"
+                  >
+                    <div className="relative">
+                      <img
+                        src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`}
+                        className="w-11 h-11 rounded-full shadow-md group-hover:shadow-lg transition-all"
+                        alt={user.username}
+                      />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-[#1a1a1a] rounded-full"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{user.username}</p>
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/50"></span>
+                        Empezar chat nuevo
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {filteredChats.length > 0 && searchResults.length > 0 && <div className="my-4 border-t border-white/5 mx-4" />}
+              </div>
+            )}
+
+            {/* Chats Locales */}
+            {isLoadingChats ? (
+              <div className="flex flex-col items-center justify-center h-48 gap-4">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <p className="text-xs text-muted-foreground font-medium animate-pulse">Sincronizando mensajes...</p>
+              </div>
+            ) : (
+              <>
+                {!isSearching && chats.length === 0 && (
+                  <div className="text-center p-8 text-muted-foreground">
+                    <p className="text-sm">No tienes conversaciones.</p>
+                  </div>
+                )}
+                <ChatList
+                  chats={filteredChats}
+                  selectedChatId={selectedChatId}
+                  onSelectChat={handleSelectChat}
+                  onDeleteChat={handleDeleteChat}
+                  onPinChat={handlePinChat}
+                />
+              </>
             )}
           </div>
         </div>
 
-        {/* Lista de Resultados o Chats */}
-        <div className="flex-1 overflow-y-auto">
-          {isSearching ? (
-            <div className="p-2">
-              {isSearchingLoading && (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              )}
-              
-              {!isSearchingLoading && searchResults.length === 0 && searchQuery.length >= 2 && (
-                <p className="text-center text-sm text-muted-foreground p-8">
-                  No se encontraron usuarios.
-                </p>
-              )}
-
-              {!isSearchingLoading && searchQuery.length < 2 && (
-                <p className="text-center text-sm text-muted-foreground p-8">
-                  Escribe al menos 2 caracteres para buscar.
-                </p>
-              )}
-
-              {searchResults.map(userResult => (
-                <div
-                  key={userResult._id}
-                  onClick={() => handleStartChat(userResult._id)}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/80 cursor-pointer transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                    {userResult.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{userResult.username}</p>
-                    <p className="text-xs text-muted-foreground truncate">{userResult.email}</p>
-                  </div>
-                </div>
-              ))}
+        {/* Conversation Area */}
+        <div className={`flex-1 flex flex-col relative bg-gradient-to-br from-transparent to-black/5 backdrop-blur-sm shadow-inner
+          ${!selectedChatId ? 'hidden md:flex' : 'flex'}
+        `}>
+          {shareParams && (
+            <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in">
+              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+                {shareParams.type === 'business' ? <Search className="w-10 h-10 text-primary" /> : <MessageSquarePlus className="w-10 h-10 text-primary" />}
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Compartir {shareParams.type === 'business' ? 'Discoteca' : 'Evento'}</h3>
+              <p className="text-white/60 mb-6 max-w-xs transition-all">
+                Selecciona un chat de la lista de la izquierda para compartir <strong>{shareParams.name}</strong>
+              </p>
+              <button
+                onClick={() => { setShareParams(null); navigate('/chat', { replace: true }); }}
+                className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all text-sm font-medium"
+              >
+                Cancelar
+              </button>
             </div>
-          ) : isLoadingChats ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <ChatList
-              chats={chats}
-              selectedChatId={selectedChatId}
-              onSelectChat={setSelectedChatId}
-              onDeleteChat={handleDeleteChat}
-              onPinChat={handlePinChat}
+          )}
+          {selectedChatId && selectedChat ? (
+            <ChatConversation
+              chat={{ ...selectedChat, messages: selectedChatMessages }}
+              onSendMessage={handleSendMessage}
+              onBack={() => setSelectedChatId(null)}
+              currentUserId={user?.id || ''}
+              typingUsers={typingUsers[selectedChatId] || new Set()}
             />
+          ) : (
+            <div className="hidden md:flex flex-col items-center justify-center h-full text-center p-8 space-y-6 animate-in zoom-in-95 duration-500">
+              <div className="relative w-32 h-32">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
+                <MessageSquarePlus className="w-full h-full text-primary/80 relative z-10 drop-shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-white/80 to-white/40">
+                  NightUp Chat
+                </h2>
+                <p className="text-muted-foreground/80 max-w-md text-lg font-light leading-relaxed">
+                  Conecta con tus amigos, organiza planes y vive la noche.
+                  <br />Selecciona un chat para comenzar.
+                </p>
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* CONVERSACIÓN */}
-      <div className={`flex-1 flex flex-col bg-background/50 ${!selectedChatId ? 'hidden md:flex' : 'flex'}`}>
-        {selectedChatId && currentChat ? (
-          <ChatConversation
-            chat={{ ...currentChat, messages: messages[selectedChatId] || [] }}
-            onSendMessage={handleSendMessage}
-            onBack={() => setSelectedChatId(null)}
-            currentUserId={user?._id || ''}
-            typingUsers={typingUsers[selectedChatId] || new Set()}
-          />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
-              <MessageSquarePlus className="w-10 h-10 opacity-50" />
-            </div>
-            <p className="text-sm">Selecciona un chat o busca un usuario para empezar.</p>
-          </div>
-        )}
       </div>
     </div>
   );

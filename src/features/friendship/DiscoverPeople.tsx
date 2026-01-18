@@ -70,98 +70,10 @@ export default function DiscoverPeople() {
     }));
   }, [friendshipUpdates]);
 
-  // ✅ NUEVO: Escuchar sockets localmente para actualizar cards en tiempo real
-  useEffect(() => {
-    if (!user?.id) return;
+  // ✅ El manejo de eventos de socket se realiza globalmente en NotificationsContext
+  // y actualiza el FriendshipContext, que a su vez actualiza este componente
+  // a través del useEffect anterior.
 
-    console.log('🔌 [DiscoverPeople] Configurando listeners de socket locales');
-
-    // ✅ Cuando RECIBO una solicitud
-    const handleFriendRequestReceived = (data: any) => {
-      console.log('📬 [DiscoverPeople Socket] Solicitud recibida de:', data.sender);
-      
-      const senderId = data.sender._id;
-      
-      // Actualizar card del remitente
-      setAllUsers(prev => prev.map(u => 
-        u._id === senderId 
-          ? { ...u, status: 'pending_received' as FriendshipStatusType, friendshipId: data.friendshipId }
-          : u
-      ));
-      
-      // Actualizar contexto global
-      updateFriendship(senderId, 'pending_received', data.friendshipId);
-      
-      console.log('✅ [DiscoverPeople] Card actualizada: usuario', data.sender.username, '→ pending_received');
-    };
-
-    // ✅ Cuando me ACEPTAN una solicitud
-    const handleFriendRequestAccepted = (data: any) => {
-      console.log('✅ [DiscoverPeople Socket] Solicitud aceptada por:', data.accepter);
-      
-      const accepterId = typeof data.accepter === 'string' ? data.accepter : data.accepter._id;
-      
-      // Actualizar card del que aceptó
-      setAllUsers(prev => prev.map(u => 
-        u._id === accepterId 
-          ? { ...u, status: 'friends' as FriendshipStatusType, friendshipId: data.friendshipId }
-          : u
-      ));
-      
-      // Actualizar contexto global
-      updateFriendship(accepterId, 'friends', data.friendshipId);
-      
-      console.log('✅ [DiscoverPeople] Card actualizada: ahora son amigos');
-    };
-
-    // ✅ Cuando me CANCELAN/RECHAZAN una solicitud
-    const handleFriendRequestCancelled = (data: any) => {
-      console.log('❌ [DiscoverPeople Socket] Solicitud cancelada por:', data.senderId);
-      
-      // Actualizar card del que canceló
-      setAllUsers(prev => prev.map(u => 
-        u._id === data.senderId 
-          ? { ...u, status: 'none' as FriendshipStatusType, friendshipId: null }
-          : u
-      ));
-      
-      // Actualizar contexto global
-      updateFriendship(data.senderId, 'none', null);
-      
-      console.log('✅ [DiscoverPeople] Card actualizada: solicitud cancelada');
-    };
-
-    // ✅ Cuando me ELIMINAN de amigos
-    const handleFriendRemoved = (data: any) => {
-      console.log('🗑️ [DiscoverPeople Socket] Amigo eliminado:', data.removedBy);
-      
-      const removerId = typeof data.removedBy === 'string' ? data.removedBy : data.removedBy._id;
-      
-      // Actualizar card del que eliminó
-      setAllUsers(prev => prev.map(u => 
-        u._id === removerId 
-          ? { ...u, status: 'none' as FriendshipStatusType, friendshipId: null }
-          : u
-      ));
-      
-      // Actualizar contexto global
-      updateFriendship(removerId, 'none', null);
-      
-      console.log('✅ [DiscoverPeople] Card actualizada: ya no son amigos');
-    };
-
-    // ✅ Registrar listeners
-    socketService.onFriendRequestReceived(handleFriendRequestReceived);
-    socketService.onFriendRequestAcceptedNotification(handleFriendRequestAccepted);
-    socketService.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
-    socketService.onFriendRemovedNotification(handleFriendRemoved);
-
-    // ✅ Cleanup
-    return () => {
-      console.log('🧹 [DiscoverPeople] Limpiando listeners de socket locales');
-      socketService.offFriendshipEvents();
-    };
-  }, [user?.id, updateFriendship]);
 
   useEffect(() => {
     loadFilterOptions();
@@ -482,9 +394,9 @@ export default function DiscoverPeople() {
         </Card>
       </div>
 
-      <NotificationsPanel 
-        isOpen={showNotificationsPanel} 
-        onClose={() => setShowNotificationsPanel(false)} 
+      <NotificationsPanel
+        isOpen={showNotificationsPanel}
+        onClose={() => setShowNotificationsPanel(false)}
       />
 
       {selectedUser && (

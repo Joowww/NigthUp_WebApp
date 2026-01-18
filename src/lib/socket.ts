@@ -75,6 +75,10 @@ class SocketService {
     return this.userId;
   }
 
+  getSocket(): Socket | null {
+    return this.socket;
+  }
+
   // ============================================
   // EMIT
   // ============================================
@@ -117,6 +121,10 @@ class SocketService {
 
   requestOnlineUsers() {
     this.socket?.emit('getOnlineUsers');
+  }
+
+  markAsRead(data: { conversationId: string }) {
+    this.socket?.emit('markAsRead', data);
   }
 
   // ============================================
@@ -216,14 +224,14 @@ class SocketService {
   }
 
   // ✅ MANTENER SOLO ESTA (línea ~229)
-emitFriendRequestCancelled(recipientId: string, friendshipId: string, senderId: string) {
-  this.socket?.emit('friendRequestCancelled', {
-    recipientId,
-    friendshipId,
-    senderId
-  });
-  console.log('❌ [Socket] Emitido friendRequestCancelled:', { recipientId, friendshipId, senderId });
-}
+  emitFriendRequestCancelled(recipientId: string, friendshipId: string, senderId: string) {
+    this.socket?.emit('friendRequestCancelled', {
+      recipientId,
+      friendshipId,
+      senderId
+    });
+    console.log('❌ [Socket] Emitido friendRequestCancelled:', { recipientId, friendshipId, senderId });
+  }
 
   /**
    * Escuchar solicitud recibida
@@ -258,7 +266,7 @@ emitFriendRequestCancelled(recipientId: string, friendshipId: string, senderId: 
   }) => void) {
     this.socket?.on('friendRequestAcceptedNotification', cb);
   }
-  
+
   /**
    * Escuchar solicitud cancelada
    */
@@ -270,38 +278,38 @@ emitFriendRequestCancelled(recipientId: string, friendshipId: string, senderId: 
     this.socket?.on('friendRequestCancelledNotification', cb);
   }
 
-/**
- * Emitir eliminación de amigo
- */
-emitFriendRemoved(friendId: string, friendshipId: string, removedBy: string) {
-  this.socket?.emit('friendRemoved', {
-    friendId,
-    friendshipId,
-    removedBy
-  });
-  console.log('❌ [Socket] Emitido friendRemoved:', { friendId, friendshipId, removedBy });
-}
+  /**
+   * Emitir eliminación de amigo
+   */
+  emitFriendRemoved(friendId: string, friendshipId: string, removedBy: string) {
+    this.socket?.emit('friendRemoved', {
+      friendId,
+      friendshipId,
+      removedBy
+    });
+    console.log('❌ [Socket] Emitido friendRemoved:', { friendId, friendshipId, removedBy });
+  }
 
-/**
- * Escuchar eliminación de amigo
- */
-onFriendRemovedNotification(cb: (data: {
-  friendshipId: string;
-  removedBy: any;
-  timestamp: Date;
-}) => void) {
-  this.socket?.on('friendRemovedNotification', cb);
-}
+  /**
+   * Escuchar eliminación de amigo
+   */
+  onFriendRemovedNotification(cb: (data: {
+    friendshipId: string;
+    removedBy: any;
+    timestamp: Date;
+  }) => void) {
+    this.socket?.on('friendRemovedNotification', cb);
+  }
 
-/**
- * Limpiar listeners de friendship (actualizado)
- */
-offFriendshipEvents() {
-  this.socket?.off('friendRequestReceived');
-  this.socket?.off('friendRequestAcceptedNotification');
-  this.socket?.off('friendRequestCancelledNotification');
-  this.socket?.off('friendRemovedNotification'); // ✅ AÑADIR
-}
+  /**
+   * Limpiar listeners de friendship (actualizado)
+   */
+  offFriendshipEvents() {
+    this.socket?.off('friendRequestReceived');
+    this.socket?.off('friendRequestAcceptedNotification');
+    this.socket?.off('friendRequestCancelledNotification');
+    this.socket?.off('friendRemovedNotification'); // ✅ AÑADIR
+  }
 
 
 }

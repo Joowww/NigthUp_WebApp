@@ -16,18 +16,18 @@ interface UserCardProps {
   onStatusChange?: (newStatus: string) => void;
 }
 
-export function UserCard({ 
-  user, 
+export function UserCard({
+  user,
   onViewProfile,
   onStatusChange
 }: UserCardProps) {
-  
+
   const fullName = getFullName(user);
   const avatarUrl = getAvatarUrl(user);
   const location = user.city || user.comunidad || 'Ubicación no especificada';
 
   return (
-    <Card 
+    <Card
       className="group cursor-pointer overflow-hidden border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
       onClick={onViewProfile}
     >
@@ -42,12 +42,12 @@ export function UserCard({
                   {user.username.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              
+
               {/* Indicador online/offline */}
               <div className="absolute bottom-0 right-0">
-                <OnlineStatusBadge 
-                  userId={user._id} 
-                  size="md" 
+                <OnlineStatusBadge
+                  userId={user._id}
+                  size="md"
                   showOffline={true}
                 />
               </div>
@@ -83,8 +83,8 @@ export function UserCard({
 
         {/* Amigos en común */}
         <div className="px-6 pb-3">
-          <MutualFriends 
-            userId={user._id} 
+          <MutualFriends
+            userId={user._id}
             limit={3}
             showAvatars={true}
           />
@@ -99,9 +99,9 @@ export function UserCard({
             </div>
             <div className="flex flex-wrap gap-1">
               {user.intereses.slice(0, 3).map((interest, index) => (
-                <Badge 
-                  key={index} 
-                  variant="secondary" 
+                <Badge
+                  key={index}
+                  variant="secondary"
                   className="text-xs bg-secondary/20 hover:bg-secondary/30"
                 >
                   {interest}
@@ -126,7 +126,7 @@ export function UserCard({
             size="sm"
             fullWidth={true}
           />
-          
+
           <Button
             onClick={onViewProfile}
             variant="outline"
@@ -135,6 +135,23 @@ export function UserCard({
           >
             Ver perfil completo
           </Button>
+
+          {user.status === 'friends' && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Navegar al chat usando window.location para forzar recarga de estado si es necesario
+                // O mejor, usar useNavigate si estuviéramos dentro de un router context seguro
+                window.location.href = `/chat?openUserId=${user._id}`;
+              }}
+              variant="default" // Un estilo diferente para resaltar
+              size="sm"
+              className="w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+            >
+              <Music className="w-4 h-4" /> {/* Usando icono de música como placeholder o buscar MessageCircle */}
+              Enviar Mensaje
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

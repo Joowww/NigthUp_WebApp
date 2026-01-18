@@ -1,4 +1,29 @@
 import type { User } from './user';
+import type { Event } from './event';
+import type { IBusiness } from './bussiness';
+
+// ============================================
+// TIPOS ESPECIALES DE CONTENIDO
+// ============================================
+
+export type MessageType = 'text' | 'location' | 'event' | 'business' | 'image' | 'video' | 'audio';
+
+export interface ILocationData {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  name?: string;
+}
+
+export interface IEventData {
+  eventId: string;
+  eventDetails?: Event; // Populated event data
+}
+
+export interface IBusinessData {
+  businessId: string;
+  businessDetails?: IBusiness; // Populated business data
+}
 
 // ============================================
 // INTERFACES BASE
@@ -15,20 +40,29 @@ interface IMessage {
   sender: User | string;
   senderModel: 'User' | 'Business';
   text: string;
-  
+
+  // Tipo y datos especiales del mensaje
+  messageType?: MessageType;
+  locationData?: ILocationData;
+  eventData?: IEventData;
+  businessData?: IBusinessData;
+  imageUrl?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+
   // Estados del mensaje
   isEdited: boolean;
   isDeleted: boolean;
-  
+
   // Referencia a otro mensaje (si es respuesta)
   replyTo?: IMessage | string;
-  
+
   // Array de reacciones
   reactions: IReaction[];
-  
+
   // Array de usuarios que han leído el mensaje
   readBy: string[];
-  
+
   createdAt: string;
   updatedAt: string;
 }
@@ -42,25 +76,25 @@ interface ILastMessage {
 
 interface IConversation {
   _id: string;
-  
+
   // Propiedades para chats grupales
   isGroup: boolean;
   groupName?: string;
   groupAvatar?: string;
   groupAdmins?: string[];
-  
+
   // Participantes
   participants: (User | string)[];
-  
+
   // Último mensaje
   lastMessage?: ILastMessage;
-  
+
   // Configuraciones
   settings?: any[];
-  
+
   // Contador de mensajes no leídos (calculado en frontend)
   unreadCount?: number;
-  
+
   createdAt: string;
   updatedAt: string;
 }
@@ -78,20 +112,29 @@ interface IConversationFormatted {
   lastMessage?: string;
   lastMessageTime?: string | Date;
   isPinned?: boolean;
-  participants: (User | string)[]; 
+  participants: (User | string)[];
 }
 
 interface IMessageFormatted {
-    id: string;
-    sender: User | string;
-    text: string;
-    createdAt: Date | string;
-    isEdited: boolean;
-    isDeleted: boolean;
-    replyTo?: IMessage | { text: string; sender: string };
-    reactions: IReaction[];
-    read: boolean;
-  }
+  id: string;
+  sender: User | string;
+  text: string;
+  createdAt: Date | string;
+  isEdited: boolean;
+  isDeleted: boolean;
+  replyTo?: IMessage | { text: string; sender: string };
+  reactions: IReaction[];
+  read: boolean;
+
+  // Campos especiales para mensajes enriquecidos
+  messageType?: MessageType;
+  locationData?: ILocationData;
+  eventData?: IEventData;
+  businessData?: IBusinessData;
+  imageUrl?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+}
 
 // ============================================
 // TIPOS PARA EVENTOS DE SOCKET.IO (cliente → servidor)
@@ -101,6 +144,10 @@ interface SocketSendMessageData {
   conversationId: string;
   text: string;
   replyTo?: string;
+  messageType?: MessageType;
+  imageUrl?: string;
+  audioUrl?: string;
+  videoUrl?: string;
 }
 
 interface SocketEditMessageData {
@@ -185,11 +232,11 @@ export type {
   IMessage,
   ILastMessage,
   IConversation,
-  
+
   // Interfaces formateadas
   IConversationFormatted,
   IMessageFormatted,
-  
+
   // Socket events (cliente → servidor)
   SocketSendMessageData,
   SocketEditMessageData,
@@ -197,7 +244,7 @@ export type {
   SocketReactData,
   SocketCreateGroupData,
   SocketTypingData,
-  
+
   // Socket events (servidor → cliente)
   SocketNewMessageEvent,
   SocketMessageEditedEvent,

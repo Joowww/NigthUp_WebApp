@@ -1,18 +1,19 @@
-// features/business/BusinessEvents.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Event } from '../../modules/event';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { ImageWithFallback } from '../ImageWithFallback';
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  ChevronLeft, 
+import {
+  Calendar,
+  Clock,
+  Users,
+  ChevronLeft,
   ChevronRight,
   PartyPopper,
-  Loader2 
+  Share2,
+  Loader2
 } from 'lucide-react';
 
 interface BusinessEventsProps {
@@ -28,6 +29,7 @@ export const BusinessEvents: React.FC<BusinessEventsProps> = ({
   onJoinToggle,
   isUserJoined
 }) => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
   const eventsPerPage = 3;
 
@@ -159,18 +161,28 @@ export const BusinessEvents: React.FC<BusinessEventsProps> = ({
                   </div>
 
                   {/* Botón de acción */}
-                  {onJoinToggle && (
+                  <div className="flex gap-2">
+                    {onJoinToggle && (
+                      <Button
+                        onClick={() => onJoinToggle(event._id)}
+                        className={`flex-1 ${isJoined
+                            ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
+                            : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02]'
+                          } transition-all duration-300`}
+                      >
+                        {isJoined ? '✓ Ya estás apuntado' : 'Apuntarme al evento'}
+                      </Button>
+                    )}
                     <Button
-                      onClick={() => onJoinToggle(event._id)}
-                      className={`w-full ${
-                        isJoined
-                          ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
-                          : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02]'
-                      } transition-all duration-300`}
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 border-white/10 hover:bg-white/10"
+                      onClick={() => navigate(`/chat?shareEvent=${event._id}&name=${encodeURIComponent(event.name)}`)}
+                      title="Compartir evento"
                     >
-                      {isJoined ? '✓ Ya estás apuntado' : 'Apuntarme al evento'}
+                      <Share2 className="h-4 w-4" />
                     </Button>
-                  )}
+                  </div>
                 </CardContent>
               </div>
             </Card>
@@ -184,7 +196,7 @@ export const BusinessEvents: React.FC<BusinessEventsProps> = ({
           <div className="text-sm text-muted-foreground">
             Página {currentPage + 1} de {totalPages} ({events.length} eventos en total)
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               variant="outline"

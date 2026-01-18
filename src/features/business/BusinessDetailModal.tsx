@@ -1,5 +1,5 @@
-// features/business/BusinessDetailModal.tsx
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { IBusiness } from '../../modules/bussiness';
 import type { Event } from '../../modules/event';
 import { getEvents, joinEvent, leaveEvent } from '../events/eventService';
@@ -36,6 +36,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
   userLocation
 }) => {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
@@ -47,18 +48,18 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
     console.log('🎉 CREANDO CONFETI ANIMADO');
 
     const colors = ['#ff0080', '#00d9ff', '#7928ca', '#50fa7b', '#ffb86c', '#bd93f9'];
-    
+
     for (let i = 0; i < 50; i++) {
       setTimeout(() => {
         const confetti = document.createElement('div');
-        
+
         const startX = Math.random() * window.innerWidth;
         const endX = startX + (Math.random() - 0.5) * 300;
         const color = colors[Math.floor(Math.random() * colors.length)];
         const size = Math.random() * 10 + 5;
         const duration = Math.random() * 1000 + 1500;
         const rotation = Math.random() * 720 - 360;
-        
+
         confetti.style.cssText = `
           position: fixed;
           left: ${startX}px;
@@ -70,9 +71,9 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
           z-index: 99999;
           pointer-events: none;
         `;
-        
+
         document.body.appendChild(confetti);
-        
+
         confetti.animate([
           {
             transform: 'translateY(0) translateX(0) rotate(0deg)',
@@ -87,7 +88,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
           easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           fill: 'forwards'
         });
-        
+
         setTimeout(() => {
           confetti.remove();
         }, duration + 500);
@@ -97,20 +98,20 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
 
   useEffect(() => {
     if (!business) return;
-  
+
     const loadBusinessEvents = async () => {
       setLoading(true);
       try {
         const response = await getEvents(0, 100);
-        
-        const normalizedBusinessEventIds = (business.events || []).map(e => 
+
+        const normalizedBusinessEventIds = (business.events || []).map(e =>
           typeof e === 'object' && e !== null && '_id' in (e as { _id?: string }) ? (e as { _id: string })._id : e
         );
-        
+
         const businessEvents = response.events.filter(event =>
           normalizedBusinessEventIds.includes(event._id)
         );
-        
+
         setEvents(businessEvents);
       } catch (error) {
         console.error('Error loading events:', error);
@@ -118,7 +119,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
         setLoading(false);
       }
     };
-  
+
     loadBusinessEvents();
   }, [business]);
 
@@ -166,13 +167,18 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
     } catch (error) {
       console.error('Error en join/leave:', error);
       alert('Hubo un error al procesar tu solicitud.');
-      
+
       const response = await getEvents(0, 100);
       const businessEvents = response.events.filter(event =>
         business.events?.includes(event._id)
       );
       setEvents(businessEvents);
     }
+  };
+
+  const handleShare = () => {
+    if (!business) return;
+    navigate(`/chat?shareBusiness=${business._id}&name=${encodeURIComponent(business.name)}`);
   };
 
   return (
@@ -193,9 +199,8 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
               </DialogTitle>
               <div className="flex items-center gap-3">
                 <Badge
-                  className={`${
-                    business.active ? 'bg-green-500/90' : 'bg-gray-500/90'
-                  } text-white`}
+                  className={`${business.active ? 'bg-green-500/90' : 'bg-gray-500/90'
+                    } text-white`}
                 >
                   {business.active ? 'Activo' : 'Inactivo'}
                 </Badge>
@@ -270,7 +275,11 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
                 <Heart className="h-4 w-4" />
                 Guardar
               </Button>
-              <Button variant="outline" className="flex-1 gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={handleShare}
+              >
                 <Share2 className="h-4 w-4" />
                 Compartir
               </Button>
