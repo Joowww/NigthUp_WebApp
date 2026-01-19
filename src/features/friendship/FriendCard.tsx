@@ -5,7 +5,6 @@ import { Button } from '../../ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '../../ui/avatar';
 import { OnlineStatusBadge } from '../OnlineStatusBadge';
 import { getAvatarUrl, getFullName } from '../../modules/friendship';
-import type { PublicUser } from '../../modules/friendship';
 import { FriendshipButton } from './FriendshipButton';
 import {
   DropdownMenu,
@@ -18,11 +17,11 @@ import type { PublicUserWithFriendship } from '../../modules/friendship';
 
 
 interface FriendCardProps {
-    friend: PublicUserWithFriendship;
-    onViewProfile: () => void;
-    onSendMessage: () => void;
-    onRemove: () => void;
-  }
+  friend: PublicUserWithFriendship;
+  onViewProfile: () => void;
+  onSendMessage: () => void;
+  onRemove: () => void;
+}
 
 export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: FriendCardProps) {
   const fullName = getFullName(friend);
@@ -35,7 +34,7 @@ export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: F
   }
 
   return (
-    <Card 
+    <Card
       className="group hover:border-primary/50 transition-all duration-300 overflow-hidden cursor-pointer"
       onClick={onViewProfile}
     >
@@ -82,7 +81,7 @@ export function FriendCard({ friend, onViewProfile, onSendMessage, onRemove }: F
                     Enviar mensaje
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={(e) => { e.stopPropagation(); onRemove(); }}
                     className="text-destructive focus:text-destructive"
                   >

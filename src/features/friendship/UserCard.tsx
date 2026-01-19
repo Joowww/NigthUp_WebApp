@@ -1,5 +1,5 @@
 // src/features/friendship/UserCard.tsx
-import { MapPin, Music } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';

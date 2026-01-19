@@ -1,4 +1,4 @@
-import { X, MapPin, Calendar, Clock, DollarSign, Users, Heart } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, DollarSign, Users } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { ImageWithFallback } from '../ImageWithFallback'; // Adjust path if needed

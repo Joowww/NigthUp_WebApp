@@ -1,4 +1,4 @@
-import { X, MapPin, Calendar, Heart, Users } from 'lucide-react';
+import { X, MapPin, Calendar, Heart } from 'lucide-react';
 import type { User } from '../../modules/user';
 import { OnlineStatusBadge } from '../OnlineStatusBadge';
 
@@ -10,7 +10,7 @@ interface UserProfileModalProps {
     onShareBusiness?: (businessId: string) => void;
 }
 
-export function UserProfileModal({ user, onClose, onStartChat, onShareEvent, onShareBusiness }: UserProfileModalProps) {
+export function UserProfileModal({ user, onClose, onStartChat, onShareEvent }: UserProfileModalProps) {
     return (
         <>
             {/* Backdrop */}
