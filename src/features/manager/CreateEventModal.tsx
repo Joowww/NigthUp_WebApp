@@ -27,7 +27,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
     price: initialData?.price || '',
     capacity: initialData?.capacity || '',
     description: initialData?.description || '',
-    imageUrl: initialData?.image || '',
+    image: initialData?.image || '',
     city: initialData?.city || '',
   });
 
@@ -53,7 +53,7 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
         type: 'Point',
         coordinates: [parseFloat(formData.latitude) || 0, parseFloat(formData.longitude) || 0]
       },
-      image: formData.imageUrl,
+      image: formData.image,
       price: parseFloat(formData.price?.toString().replace('€', '')) || 0,
 
       capacity: parseInt(formData.capacity) || 0,
@@ -294,16 +294,16 @@ export function CreateEventModal({ onClose, onSave, initialData }: CreateEventMo
 
           {/* URL de Imagen */}
           <div className="space-y-2">
-            <Label htmlFor="imageUrl" className="flex items-center gap-2">
+            <Label htmlFor="image" className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4 text-[#00d9ff]" />
               URL de Imagen
             </Label>
             <Input
-              id="imageUrl"
+              id="image"
               type="url"
               placeholder="https://..."
-              value={formData.imageUrl}
-              onChange={(e) => handleChange('imageUrl', e.target.value)}
+              value={formData.image}
+              onChange={(e) => handleChange('image', e.target.value)}
               className="bg-background border-border"
             />
             <p className="text-xs text-muted-foreground">

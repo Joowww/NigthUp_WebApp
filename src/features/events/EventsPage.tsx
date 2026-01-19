@@ -228,8 +228,7 @@ export function EventsPage() {
                     {/* IMAGEN */}
                     <div className="relative h-48 w-full overflow-hidden">
                       <ImageWithFallback
-                        // Si tu modelo Event no tiene campo 'image', usamos un placeholder cool
-                        src={'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&w=800&q=80'}
+                        src={event.image || ''}
                         alt={event.name}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />

@@ -12,7 +12,7 @@ export interface Event {
   price: number;
   participants: string[];
   city?: string;
-  imageUrl?: string; // Added imageUrl property
+  image?: string; // Standardized to 'image' as per backend
 
 }
 

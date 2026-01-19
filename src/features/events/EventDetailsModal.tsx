@@ -65,7 +65,7 @@ export function EventDetailsModal({ event, onClose, onJoinToggle, isJoined }: Ev
                     {/* Left Column: Image */}
                     <div className="relative h-64 md:h-full min-h-[300px]">
                         <ImageWithFallback
-                            src={'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&w=800&q=80'}
+                            src={event.image || ''}
                             alt={event.name}
                             className="h-full w-full object-cover"
                         />
