@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
 import { useFriendshipContext } from './FriendshipContext';
 import type { FriendNotification } from '../features/friendship/notificationService';
+import api from '../api';
 
 interface NotificationsContextType {
   notifications: FriendNotification[];
@@ -17,12 +18,15 @@ interface NotificationsContextType {
   refresh: () => Promise<void>;
   setNotifications: React.Dispatch<React.SetStateAction<FriendNotification[]>>;
   setUnreadCount: React.Dispatch<React.SetStateAction<number>>;
+  unreadChatCount: number;
+  setUnreadChatCount: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const notificationsData = useNotifications();
+  const [unreadChatCount, setUnreadChatCount] = React.useState(0);
   const { user } = useAuth();
   const { socket, connected } = useSocket(); // ✅ Usar hook para saber el estado real
   const { updateFriendship } = useFriendshipContext();
@@ -151,8 +155,20 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       updateFriendship(data.friendId.toString(), 'none', null);
     };
 
+    // ✅ 5. CHAT GLOBAL LISTENER (BADGE)
+    const handleNewMessageGlobal = (message: any) => {
+      // Ignorar si el mensaje es nuestro
+      const senderId = typeof message.sender === 'string' ? message.sender : message.sender._id;
+      if (senderId === user?.id) return;
+
+      // Si estamos en la página de chat y en esa conersación, ChatPage manejará el "read"
+      // Pero aquí incrementamos el global badge.
+      setUnreadChatCount(prev => prev + 1);
+    };
+
     // REGISTRAR TODO
     socket.onFriendRequestReceived(handleFriendRequestReceived);
+    socket.onNewMessage(handleNewMessageGlobal);
     socket.onFriendRequestAcceptedNotification(handleFriendRequestAccepted);
     socket.onFriendRequestCancelledNotification(handleFriendRequestCancelled);
     socket.onFriendRemovedNotification(handleFriendRemoved);
@@ -166,6 +182,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return () => {
       console.log('🧹 [NotificationsProvider] Limpiando listeners');
       socket.offFriendshipEvents();
+      socket.offNewMessage();
     };
   }, [user?.id, connected, socket, updateFriendship, notificationsData.refresh]);
 
@@ -174,16 +191,37 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (!user?.id) return;
 
+    // Load initial unread chat count
+    api.get('/chat').then(({ data }) => {
+      if (Array.isArray(data)) {
+        const total = data.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
+        setUnreadChatCount(total);
+      }
+    }).catch(err => console.error('Error loading unread chats:', err));
+
     const interval = setInterval(() => {
       console.log('⏰ [NotificationsProvider] Polling notifications...');
       notificationsData.refresh();
+
+      // Also refresh chat count occasionally
+      api.get('/chat').then(({ data }) => {
+        if (Array.isArray(data)) {
+          const total = data.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
+          setUnreadChatCount(total);
+        }
+      }).catch(err => console.error('Error polling unread chats:', err));
+
     }, 30000);
 
     return () => clearInterval(interval);
   }, [user?.id, notificationsData.refresh]);
 
   return (
-    <NotificationsContext.Provider value={notificationsData}>
+    <NotificationsContext.Provider value={{
+      ...notificationsData,
+      unreadChatCount,
+      setUnreadChatCount
+    }}>
       {children}
     </NotificationsContext.Provider>
   );

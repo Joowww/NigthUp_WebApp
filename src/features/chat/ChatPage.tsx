@@ -17,12 +17,19 @@ import type { User } from '../../modules/user';
 import { OnlineStatusBadge } from '../OnlineStatusBadge';
 import { useFriendshipContext } from '../../context/FriendshipContext';
 import { censorText } from '../../utils/profanityFilter';
+import { UserProfileModal } from '../friendship/UserProfileModal';
+import { useNotificationsContext } from '../../context/NotificationsContext';
 
 export function ChatPage() {
   const { user } = useAuth();
   const { socket, connected } = useSocket();
   const location = useLocation(); // Hook location
   const navigate = useNavigate();
+  const { setUnreadChatCount } = useNotificationsContext();
+
+  // State for Profile Viewing in Search
+  const [viewingProfileUsername, setViewingProfileUsername] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Estados de Chat
   const [chats, setChats] = useState<IConversationFormatted[]>([]);
@@ -94,6 +101,12 @@ export function ChatPage() {
 
     loadChats();
   }, [user?._id]);
+
+  // Sync Unread Count Global
+  useEffect(() => {
+    const total = chats.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
+    setUnreadChatCount(total);
+  }, [chats, setUnreadChatCount]);
 
   // 1.2. Unirse a todas las salas de chat al cargar (para recibir actualizaciones en tiempo real)
   useEffect(() => {
@@ -178,12 +191,17 @@ export function ChatPage() {
     const shareEventId = params.get('shareEvent');
     const name = params.get('name');
 
-    if (openUserId && !isLoadingChats && chats.length > 0) {
+    if (openUserId && !isLoadingChats) {
       handleStartChat(openUserId);
       navigate('/chat', { replace: true });
-    } else if (openUserId && !isLoadingChats && chats.length === 0) {
-      handleStartChat(openUserId);
-      navigate('/chat', { replace: true });
+    }
+
+    // Handle state navigation (from UserProfileModal etc)
+    const state = location.state as { startChatWith?: string; openUserId?: string } | null;
+    if (state?.startChatWith && !isLoadingChats) {
+      handleStartChat(state.startChatWith);
+      // Clear state to prevent loop
+      navigate(location.pathname, { replace: true, state: {} });
     }
 
     if ((shareBusinessId || shareEventId) && name) {
@@ -361,6 +379,39 @@ export function ChatPage() {
     };
   }, [selectedChatId, user?._id, socket]);
 
+  // ✅ 3.5. Marcar como leído
+  useEffect(() => {
+    if (!selectedChatId || !user?._id || !socket || !messages[selectedChatId]) return;
+
+    const unreadMessages = messages[selectedChatId].filter(
+      m => !m.read &&
+        (typeof m.sender === 'string' ? m.sender !== user._id : m.sender._id !== user._id)
+    );
+
+    if (unreadMessages.length > 0) {
+      const messageIds = unreadMessages.map(m => m.id);
+
+      // Emit socket event
+      socket.getSocket()?.emit('markAsRead', {
+        conversationId: selectedChatId,
+        messageIds
+      });
+
+      // Optimistic update
+      setMessages(prev => ({
+        ...prev,
+        [selectedChatId]: prev[selectedChatId].map(m =>
+          messageIds.includes(m.id) ? { ...m, read: true } : m
+        )
+      }));
+
+      // Update chat unread count
+      setChats(prev => prev.map(c =>
+        c.id === selectedChatId ? { ...c, unreadCount: 0 } : c
+      ));
+    }
+  }, [selectedChatId, selectedChatId ? messages[selectedChatId]?.length : 0, user?._id]);
+
   // ✅ 4. Lógica de Búsqueda MEJORADA
   // Filtra chats locales Y busca usuarios globales
   // 5. Buscar Usuarios y Amigos
@@ -433,7 +484,7 @@ export function ChatPage() {
     const optimisticMessage: IMessageFormatted = {
       id: `temp-${Date.now()}`,
       sender: {
-        _id: user?._id || user?.id || '',
+        _id: user?._id || '',
         username: user?.username || 'Yo',
         avatar: user?.avatar || '',
         email: '', // Mandatory fields for Type safety if not using 'as any' as strictly
@@ -668,10 +719,9 @@ export function ChatPage() {
                 {searchResults.map(user => (
                   <div
                     key={user._id}
-                    onClick={() => handleStartChat(user._id)}
-                    className="flex items-center gap-3 p-3 mx-1 rounded-2xl hover:bg-white/5 cursor-pointer transition-all active:scale-[0.98] group border border-transparent hover:border-white/5"
+                    className="flex items-center gap-3 p-3 mx-1 rounded-2xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5 relative"
                   >
-                    <div className="relative">
+                    <div className="relative cursor-pointer" onClick={() => handleStartChat(user._id)}>
                       <img
                         src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`}
                         className="w-11 h-11 rounded-full shadow-md group-hover:shadow-lg transition-all"
@@ -681,13 +731,25 @@ export function ChatPage() {
                         <OnlineStatusBadge userId={user._id} size="sm" showOffline={true} />
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleStartChat(user._id)}>
                       <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{user.username}</p>
                       <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary/50"></span>
                         Empezar chat nuevo
                       </p>
                     </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingProfileUsername(user.username);
+                        setIsProfileModalOpen(true);
+                      }}
+                      className="p-2 hover:bg-white/10 rounded-full text-muted-foreground hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                      title="Ver Perfil"
+                    >
+                      <Search className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
 
@@ -714,7 +776,7 @@ export function ChatPage() {
                   onSelectChat={handleSelectChat}
                   onDeleteChat={handleDeleteChat}
                   onPinChat={handlePinChat}
-                  currentUserId={user?.id || ''}
+                  currentUserId={user?._id || ''}
                 />
               </>
             )}
@@ -747,7 +809,7 @@ export function ChatPage() {
               chat={{ ...selectedChat, messages: selectedChatMessages }}
               onSendMessage={handleSendMessage}
               onBack={() => setSelectedChatId(null)}
-              currentUserId={user?.id || ''}
+              currentUserId={user?._id || ''}
               typingUsers={typingUsers[selectedChatId] || new Set()}
             />
           ) : (
@@ -770,6 +832,11 @@ export function ChatPage() {
         </div>
 
       </div>
+      <UserProfileModal
+        username={viewingProfileUsername || ''}
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </div>
   );
 }

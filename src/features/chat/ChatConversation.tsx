@@ -27,6 +27,8 @@ import { getAvatarUrl } from '../../modules/friendship';
 import { censorText } from '../../utils/profanityFilter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BusinessMessage } from './BusinessMessage';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
 
 interface ChatConversationProps {
   chat: IConversationFormatted & { messages: IMessageFormatted[] };
@@ -47,7 +49,9 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [otherUserUsername, setOtherUserUsername] = useState<string | null>(null);
+
   const [showDigitalConscience, setShowDigitalConscience] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -278,6 +282,10 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
         console.warn('⚠️ [ChatConversation] No se pudo encontrar el username del destinatario');
       }
     }
+  };
+
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    setMessage((prev) => prev + emojiData.emoji);
   };
 
   return (
@@ -552,8 +560,25 @@ export function ChatConversation({ chat, onSendMessage, onBack, currentUserId, t
                 className="w-full bg-transparent border-none focus:ring-0 text-sm md:text-base py-2 px-2 resize-none max-h-32 text-white placeholder:text-white/20 custom-scrollbar"
                 rows={1}
               />
-              <button type="button" className="p-2 text-white/50 hover:text-white transition-colors"><Smile className="w-5 h-5" /></button>
+              <button
+                type="button"
+                className={`p-2 transition-colors ${showEmojiPicker ? 'text-primary' : 'text-white/50 hover:text-white'}`}
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
             </div>
+            {showEmojiPicker && (
+              <div className="absolute bottom-20 right-4 z-50 shadow-2xl rounded-2xl overflow-hidden">
+                <EmojiPicker
+                  theme={Theme.DARK}
+                  onEmojiClick={onEmojiClick}
+                  width={300}
+                  height={400}
+                  lazyLoadEmojis={true}
+                />
+              </div>
+            )}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

@@ -37,7 +37,7 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
   const { logout, user } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { unreadCount } = useNotificationsContext();
+  const { unreadCount, unreadChatCount } = useNotificationsContext();
 
   const menuItems = [
     { path: '/', label: t('sidebar.home', 'Inicio'), icon: Home },
@@ -145,9 +145,12 @@ export const SimpleSidebar: React.FC<SimpleSidebarProps> = ({ isOpen, onToggle }
                     <div className="relative">
                       <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
 
-                      {/* ✅ Badge SOLO en Amigos */}
+                      {/* ✅ Badge en Amigos y Chat */}
                       {item.path === '/friendship' && unreadCount > 0 && (
                         <NotificationBadge count={unreadCount} />
+                      )}
+                      {item.path === '/chat' && unreadChatCount > 0 && (
+                        <NotificationBadge count={unreadChatCount} />
                       )}
                     </div>
 

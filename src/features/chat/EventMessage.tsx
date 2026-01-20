@@ -65,10 +65,10 @@ export function EventMessage({ eventData, isOwn }: EventMessageProps) {
       `}
         >
             {/* Imagen del evento */}
-            {event.imageUrl && (
+            {event.image && (
                 <div className="relative h-44 overflow-hidden">
                     <img
-                        src={event.imageUrl}
+                        src={event.image}
                         alt={event.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
