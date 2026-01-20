@@ -31,7 +31,11 @@ class SocketService {
 
     this.userId = userId;
 
-    this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+    const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Remove /api suffix if present to avoid "Invalid namespace" error in production
+    const socketUrl = rawUrl.replace(/\/api$/, '');
+
+    this.socket = io(socketUrl, {
       autoConnect: false,                 // 🔴 CLAVE: no conectar hasta tener auth
       auth: {
         userId,
